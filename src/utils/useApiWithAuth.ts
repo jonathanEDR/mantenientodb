@@ -1,3 +1,5 @@
+/// <reference types="vite/client" />
+
 import { useAuth } from '@clerk/clerk-react';
 import axios from 'axios';
 

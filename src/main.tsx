@@ -4,6 +4,11 @@ import App from './App';
 import './index.css';
 import { ClerkProvider } from '@clerk/clerk-react';
 
+// Importar debugging solo en desarrollo
+if ((import.meta as any).env.DEV) {
+  import('./utils/debug');
+}
+
 const PUBLISHABLE_KEY = (import.meta as any).env.VITE_CLERK_PUBLISHABLE_KEY;
 if (!PUBLISHABLE_KEY) {
   throw new Error('Missing Clerk publishable key (VITE_CLERK_PUBLISHABLE_KEY)');

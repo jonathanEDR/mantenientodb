@@ -2,7 +2,7 @@ import axios, { AxiosInstance } from 'axios';
 
 // Crear instancia de axios con configuración base
 const axiosInstance: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001',
+  baseURL: (import.meta as any).env.VITE_API_BASE_URL || 'http://localhost:5000',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -14,7 +14,7 @@ axiosInstance.interceptors.request.use(
   async (config) => {
     try {
       // Obtener token de Clerk si está disponible
-      const token = await window.Clerk?.session?.getToken();
+      const token = await (window as any).Clerk?.session?.getToken();
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
