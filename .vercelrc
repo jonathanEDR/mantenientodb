@@ -1,0 +1,12 @@
+# Vercel Build Configuration
+
+# Framework Detection
+FRAMEWORK_PRESET=vite
+
+# Build Configuration
+BUILD_COMMAND=npm run build
+INSTALL_COMMAND=npm install
+OUTPUT_DIRECTORY=dist
+
+# Environment
+NODE_VERSION=18

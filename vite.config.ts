@@ -20,6 +20,9 @@ export default defineConfig({
       }
     }
   },
+  // Configuración específica para Vercel
+  base: '/',
+  publicDir: 'public',
   server: {
     port: 5173,
     proxy: {
