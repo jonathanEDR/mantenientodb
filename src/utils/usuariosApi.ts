@@ -1,7 +1,13 @@
 /// <reference types="vite/client" />
 /// <reference path="../types/clerk.d.ts" />
 import axios from 'axios';
-import { IUsuariosResponse, IEstadisticasUsuariosResponse } from '../types/usuarios';
+import { 
+  IUsuariosResponse, 
+  IEstadisticasUsuariosResponse,
+  ICambiarRolRequest,
+  ICambiarRolResponse,
+  ICurrentUserResponse
+} from '../types/usuarios';
 
 // Configurar base URL para las API calls
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
@@ -41,5 +47,22 @@ export const obtenerUsuarios = async (): Promise<IUsuariosResponse> => {
 export const obtenerEstadisticasUsuarios = async (): Promise<IEstadisticasUsuariosResponse> => {
   const headers = await getAuthHeaders();
   const response = await axios.get(`${BASE_URL}/users/stats`, { headers });
+  return response.data;
+};
+
+// Cambiar rol de usuario (solo administradores)
+export const cambiarRolUsuario = async (request: ICambiarRolRequest): Promise<ICambiarRolResponse> => {
+  const headers = await getAuthHeaders();
+  const response = await axios.put(`${BASE_URL}/users/${request.userId}/role`, 
+    { newRole: request.newRole }, 
+    { headers }
+  );
+  return response.data;
+};
+
+// Obtener permisos del usuario actual
+export const obtenerPermisosUsuario = async (): Promise<ICurrentUserResponse> => {
+  const headers = await getAuthHeaders();
+  const response = await axios.get(`${BASE_URL}/users/me/permissions`, { headers });
   return response.data;
 };

@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
-import { IUsuario, IEstadisticasUsuarios } from '../types/usuarios';
-import { obtenerUsuarios, obtenerEstadisticasUsuarios } from '../utils/usuariosApi';
+import { IUsuario, IEstadisticasUsuarios, UserRole, ICambiarRolRequest } from '../types/usuarios';
+import { obtenerUsuarios, obtenerEstadisticasUsuarios, cambiarRolUsuario } from '../utils/usuariosApi';
+import { usePermissions } from '../hooks/useRoles';
+import { AdminOnly, RoleProtection } from '../components/common/RoleProtection';
 
 const GestionPersonal: React.FC = () => {
   const [usuarios, setUsuarios] = useState<IUsuario[]>([]);
   const [estadisticas, setEstadisticas] = useState<IEstadisticasUsuarios | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [changingRole, setChangingRole] = useState<string | null>(null);
+  const permissions = usePermissions();
 
   // Función para cargar datos
   const cargarDatos = async () => {
@@ -51,6 +55,81 @@ const GestionPersonal: React.FC = () => {
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  // Función para cambiar rol de usuario
+  const handleCambiarRol = async (userId: string, newRole: UserRole) => {
+    if (!permissions.canManageUsers) {
+      alert('No tienes permisos para cambiar roles');
+      return;
+    }
+
+    try {
+      setChangingRole(userId);
+      
+      const request: ICambiarRolRequest = {
+        userId,
+        newRole
+      };
+
+      const response = await cambiarRolUsuario(request);
+      
+      if (response.success) {
+        // Actualizar la lista de usuarios
+        setUsuarios(prev => prev.map(usuario => 
+          usuario._id === userId 
+            ? { ...usuario, role: newRole }
+            : usuario
+        ));
+        
+        // Recargar estadísticas
+        const responseEstadisticas = await obtenerEstadisticasUsuarios();
+        if (responseEstadisticas.success) {
+          setEstadisticas(responseEstadisticas.data);
+        }
+        
+        alert('Rol actualizado exitosamente');
+      } else {
+        alert('Error al cambiar rol: ' + response.message);
+      }
+    } catch (err) {
+      console.error('Error al cambiar rol:', err);
+      alert('Error al cambiar rol');
+    } finally {
+      setChangingRole(null);
+    }
+  };
+
+  // Función para obtener color del rol
+  const getRoleColor = (role: UserRole) => {
+    switch (role) {
+      case UserRole.ADMINISTRADOR:
+        return 'bg-red-100 text-red-800 border-red-200';
+      case UserRole.MECANICO:
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case UserRole.ESPECIALISTA:
+        return 'bg-green-100 text-green-800 border-green-200';
+      case UserRole.COPILOTO:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  // Función para obtener nombre del rol
+  const getRoleName = (role: UserRole) => {
+    switch (role) {
+      case UserRole.ADMINISTRADOR:
+        return 'Administrador';
+      case UserRole.MECANICO:
+        return 'Mecánico';
+      case UserRole.ESPECIALISTA:
+        return 'Especialista';
+      case UserRole.COPILOTO:
+        return 'Copiloto';
+      default:
+        return 'Desconocido';
+    }
   };
 
   const contenido = () => {
@@ -184,6 +263,9 @@ const GestionPersonal: React.FC = () => {
                     Email
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Rol
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Clerk ID
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -192,6 +274,11 @@ const GestionPersonal: React.FC = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Estado
                   </th>
+                  {permissions.canManageUsers && (
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Acciones
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -216,6 +303,11 @@ const GestionPersonal: React.FC = () => {
                       <div className="text-sm text-gray-900">{usuario.email}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleColor(usuario.role)}`}>
+                        {getRoleName(usuario.role)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-500 font-mono">
                         {usuario.clerkId.slice(0, 12)}...
                       </div>
@@ -228,6 +320,26 @@ const GestionPersonal: React.FC = () => {
                         Activo
                       </span>
                     </td>
+                    {permissions.canManageUsers && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <select
+                          value={usuario.role}
+                          onChange={(e) => handleCambiarRol(usuario._id, e.target.value as UserRole)}
+                          disabled={changingRole === usuario._id}
+                          className="bg-white border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <option value={UserRole.ADMINISTRADOR}>Administrador</option>
+                          <option value={UserRole.MECANICO}>Mecánico</option>
+                          <option value={UserRole.COPILOTO}>Copiloto</option>
+                          <option value={UserRole.ESPECIALISTA}>Especialista</option>
+                        </select>
+                        {changingRole === usuario._id && (
+                          <div className="mt-1 text-xs text-blue-600">
+                            Cambiando rol...
+                          </div>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
