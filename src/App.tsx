@@ -12,6 +12,9 @@ import DashboardMantenimiento from './pages/DashboardMantenimiento';
 import GestionComponentes from './pages/GestionComponentes';
 import GestionOrdenes from './pages/GestionOrdenes';
 import GestionInspecciones from './pages/GestionInspecciones';
+import GestionHerramientas from './pages/GestionHerramientas';
+import GestionCatalogoComponentes from './pages/GestionCatalogoComponentes';
+import GestionCatalogoControlMonitoreo from './pages/GestionCatalogoControlMonitoreo';
 
 export default function App() {
   return (
@@ -129,6 +132,48 @@ export default function App() {
             <>
               <SignedIn>
                 <GestionInspecciones />
+              </SignedIn>
+              <SignedOut>
+                <RedirectToSignIn />
+              </SignedOut>
+            </>
+          }
+        />
+
+        <Route
+          path="/herramientas"
+          element={
+            <>
+              <SignedIn>
+                <GestionHerramientas />
+              </SignedIn>
+              <SignedOut>
+                <RedirectToSignIn />
+              </SignedOut>
+            </>
+          }
+        />
+
+        <Route
+          path="/herramientas/catalogo-componentes"
+          element={
+            <>
+              <SignedIn>
+                <GestionCatalogoComponentes />
+              </SignedIn>
+              <SignedOut>
+                <RedirectToSignIn />
+              </SignedOut>
+            </>
+          }
+        />
+
+        <Route
+          path="/herramientas/control-monitoreo"
+          element={
+            <>
+              <SignedIn>
+                <GestionCatalogoControlMonitoreo />
               </SignedIn>
               <SignedOut>
                 <RedirectToSignIn />

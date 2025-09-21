@@ -36,6 +36,16 @@ export default function ComponenteModal({
 
   React.useEffect(() => {
     if (componente) {
+      // Extraer el ID de aeronave si es un objeto poblado
+      let aeronaveActualId = '';
+      if (componente.aeronaveActual) {
+        if (typeof componente.aeronaveActual === 'object') {
+          aeronaveActualId = componente.aeronaveActual._id;
+        } else {
+          aeronaveActualId = componente.aeronaveActual;
+        }
+      }
+
       setFormData({
         nombre: componente.nombre || '',
         categoria: componente.categoria || ComponenteCategoria.FUSELAJE,
@@ -43,7 +53,7 @@ export default function ComponenteModal({
         numeroParte: componente.numeroParte || '',
         fabricante: componente.fabricante || '',
         fechaFabricacion: componente.fechaFabricacion ? new Date(componente.fechaFabricacion).toISOString().split('T')[0] : '',
-        aeronaveActual: componente.aeronaveActual || '',
+        aeronaveActual: aeronaveActualId,
         estado: componente.estado || EstadoComponente.EN_ALMACEN,
         ubicacionFisica: componente.ubicacionFisica || '',
         observaciones: componente.observaciones || ''
@@ -67,7 +77,7 @@ export default function ComponenteModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Solo enviar los campos que espera la API ICrearComponenteData
+    // Preparar datos base
     const submitData = {
       numeroSerie: formData.numeroSerie,
       numeroParte: formData.numeroParte,
@@ -78,9 +88,10 @@ export default function ComponenteModal({
       vidaUtil: [{ limite: 1000, unidad: 'HORAS' as const, acumulado: 0 }],
       ubicacionFisica: formData.ubicacionFisica || 'Almacén',
       observaciones: formData.observaciones || '',
-      // Campos adicionales que podrían ser necesarios para actualización
+      // Incluir aeronaveActual siempre (tanto para crear como para editar)
+      ...(formData.aeronaveActual && { aeronaveActual: formData.aeronaveActual }),
+      // Campos adicionales para actualización
       ...(componente && {
-        aeronaveActual: formData.aeronaveActual,
         estado: formData.estado
       })
     };

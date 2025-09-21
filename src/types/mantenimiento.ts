@@ -1,3 +1,5 @@
+import { IAeronave } from './inventario';
+
 // Tipos para el módulo de mantenimiento
 
 // Enums
@@ -24,6 +26,7 @@ export enum ComponenteCategoria {
 export enum EstadoComponente {
   INSTALADO = 'INSTALADO',
   EN_ALMACEN = 'EN_ALMACEN',
+  EN_MANTENIMIENTO = 'EN_MANTENIMIENTO',
   EN_REPARACION = 'EN_REPARACION',
   CONDENADO = 'CONDENADO',
   EN_OVERHAUL = 'EN_OVERHAUL',
@@ -95,7 +98,7 @@ export interface IComponente {
   fabricante: string;
   fechaFabricacion: string;
   fechaInstalacion?: string;
-  aeronaveActual?: string;
+  aeronaveActual?: string | IAeronave; // Puede ser ObjectId string o datos poblados
   posicionInstalacion?: string;
   estado: EstadoComponente;
   vidaUtil: IVidaUtil[];
@@ -329,6 +332,7 @@ export interface ICrearComponenteData {
   categoria: ComponenteCategoria;
   fabricante: string;
   fechaFabricacion: string;
+  aeronaveActual?: string; // ObjectId de la aeronave
   vidaUtil: IVidaUtil[];
   ubicacionFisica: string;
   observaciones?: string;

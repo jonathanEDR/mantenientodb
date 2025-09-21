@@ -4,15 +4,15 @@ import { Link } from 'react-router-dom';
 
 export default function AuthButtons() {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-3">
       <SignedOut>
         <Link to="/sign-in">
-          <button className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">
+          <button className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-medium hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-lg hover:shadow-xl">
             Iniciar Sesión
           </button>
         </Link>
         <Link to="/sign-up">
-          <button className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700">
+          <button className="px-4 py-2 bg-transparent border border-slate-600 text-slate-300 rounded-lg font-medium hover:bg-slate-800/50 hover:border-slate-500 transition-all duration-300">
             Registrarse
           </button>
         </Link>
@@ -20,11 +20,13 @@ export default function AuthButtons() {
 
       <SignedIn>
         <Link to="/dashboard">
-          <button className="px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700">
+          <button className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-medium hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-lg hover:shadow-xl">
             Dashboard
           </button>
         </Link>
-        <UserButton />
+        <div className="ml-2">
+          <UserButton />
+        </div>
       </SignedIn>
     </div>
   );

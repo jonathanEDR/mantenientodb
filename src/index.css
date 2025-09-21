@@ -4,6 +4,23 @@
 
 html, body, #root { height: 100%; }
 
+/* Utilidades personalizadas para truncar texto */
+@layer utilities {
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
 /* Animaciones para modales */
 @keyframes fade-in {
   from {

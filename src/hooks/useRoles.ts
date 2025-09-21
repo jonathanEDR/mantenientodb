@@ -85,6 +85,12 @@ export const usePermissions = () => {
     canDeleteInventory: permissions?.canDeleteInventory || false,
     canViewInventory: permissions?.canViewInventory || false,
     
+    // Permisos de catálogos
+    canCreateCatalogs: permissions?.canCreateCatalogs || false,
+    canEditCatalogs: permissions?.canEditCatalogs || false,
+    canDeleteCatalogs: permissions?.canDeleteCatalogs || false,
+    canViewCatalogs: permissions?.canViewCatalogs || false,
+    
     // Permisos de dashboard y reportes
     canViewDashboard: permissions?.canViewDashboard || false,
     canViewAdvancedReports: permissions?.canViewAdvancedReports || false,
@@ -143,6 +149,10 @@ export const useRouteAccess = (requiredPermissions: string[]) => {
         case 'EDIT_INVENTORY': return permissions.canEditInventory;
         case 'DELETE_INVENTORY': return permissions.canDeleteInventory;
         case 'VIEW_INVENTORY': return permissions.canViewInventory;
+        case 'CREATE_CATALOGS': return permissions.canCreateCatalogs;
+        case 'EDIT_CATALOGS': return permissions.canEditCatalogs;
+        case 'DELETE_CATALOGS': return permissions.canDeleteCatalogs;
+        case 'VIEW_CATALOGS': return permissions.canViewCatalogs;
         case 'VIEW_DASHBOARD': return permissions.canViewDashboard;
         case 'VIEW_ADVANCED_REPORTS': return permissions.canViewAdvancedReports;
         case 'SYSTEM_CONFIG': return permissions.canAccessSystemConfig;

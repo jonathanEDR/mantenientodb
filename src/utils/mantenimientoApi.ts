@@ -73,6 +73,12 @@ export const actualizarComponente = async (id: string, data: Partial<ICrearCompo
   return response.data;
 };
 
+// Actualizar componente desde historial (con registros adicionales)
+export const actualizarComponenteHistorial = async (id: string, data: any): Promise<IComponenteResponse> => {
+  const response = await axiosInstance.put(`/api/mantenimiento/componentes/${id}/historial`, data);
+  return response.data;
+};
+
 // Instalar componente en aeronave
 export const instalarComponente = async (
   id: string, 

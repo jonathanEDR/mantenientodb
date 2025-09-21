@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useUser, useAuth } from '@clerk/clerk-react';
-import axios from 'axios';
+import axiosInstance from '../utils/axiosConfig';
 import DashboardLayout from '../components/layout/DashboardLayout';
 
 export default function Dashboard() {
@@ -34,7 +34,7 @@ export default function Dashboard() {
         }
 
         // Verificar si el usuario ya está en la BD
-        const response = await axios.get('/api/auth/me', {
+        const response = await axiosInstance.get('/api/auth/me', {
           headers: {
             Authorization: `Bearer ${token}`
           }
@@ -58,7 +58,7 @@ export default function Dashboard() {
 
             console.log('Enviando datos de registro:', userData);
 
-            const registerResponse = await axios.post('/api/auth/register', userData);
+            const registerResponse = await axiosInstance.post('/api/auth/register', userData);
             setDbUser(registerResponse.data.user);
             console.log('✅ Usuario registrado exitosamente en BD:', registerResponse.data.user);
 

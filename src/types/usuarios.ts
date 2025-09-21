@@ -64,6 +64,10 @@ export interface IRolePermissions {
   canEditInventory: boolean;
   canDeleteInventory: boolean;
   canViewInventory: boolean;
+  canCreateCatalogs: boolean;
+  canEditCatalogs: boolean;
+  canDeleteCatalogs: boolean;
+  canViewCatalogs: boolean;
   canViewDashboard: boolean;
   canViewAdvancedReports: boolean;
   canAccessSystemConfig: boolean;

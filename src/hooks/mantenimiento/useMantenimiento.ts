@@ -4,7 +4,8 @@ import { IAeronave } from '../../types/inventario';
 import { 
   obtenerComponentes, 
   crearComponente, 
-  actualizarComponente, 
+  actualizarComponente,
+  actualizarComponenteHistorial,
   eliminarComponente 
 } from '../../utils/mantenimientoApi';
 import { obtenerAeronaves } from '../../utils/inventarioApi';
@@ -20,6 +21,7 @@ export interface UseMantenimientoReturn {
   cargarDatos: () => Promise<void>;
   crearNuevoComponente: (componente: Partial<IComponente>) => Promise<void>;
   actualizarComponenteExistente: (id: string, componente: Partial<IComponente>) => Promise<void>;
+  actualizarComponenteDesdeHistorial: (id: string, data: any) => Promise<void>;
   eliminarComponenteExistente: (componente: IComponente) => Promise<void>;
   
   // Utilidades
@@ -63,7 +65,12 @@ export const useMantenimiento = (): UseMantenimientoReturn => {
   const crearNuevoComponente = useCallback(async (componenteData: Partial<IComponente>) => {
     try {
       setError(null);
-      await crearComponente(componenteData as IComponente);
+      // Convertir aeronaveActual si es necesario
+      const dataToSend: any = { ...componenteData };
+      if (dataToSend.aeronaveActual && typeof dataToSend.aeronaveActual === 'object') {
+        dataToSend.aeronaveActual = (dataToSend.aeronaveActual as IAeronave)._id;
+      }
+      await crearComponente(dataToSend);
       await cargarDatos();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error al crear componente';
@@ -75,10 +82,27 @@ export const useMantenimiento = (): UseMantenimientoReturn => {
   const actualizarComponenteExistente = useCallback(async (id: string, componenteData: Partial<IComponente>) => {
     try {
       setError(null);
-      await actualizarComponente(id, componenteData);
+      // Convertir aeronaveActual si es necesario
+      const dataToSend = { ...componenteData };
+      if (dataToSend.aeronaveActual && typeof dataToSend.aeronaveActual === 'object') {
+        dataToSend.aeronaveActual = (dataToSend.aeronaveActual as IAeronave)._id;
+      }
+      await actualizarComponente(id, dataToSend as any);
       await cargarDatos();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error al actualizar componente';
+      setError(errorMessage);
+      throw err;
+    }
+  }, [cargarDatos]);
+
+  const actualizarComponenteDesdeHistorial = useCallback(async (id: string, data: any) => {
+    try {
+      setError(null);
+      await actualizarComponenteHistorial(id, data);
+      await cargarDatos();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al actualizar componente desde historial';
       setError(errorMessage);
       throw err;
     }
@@ -137,6 +161,7 @@ export const useMantenimiento = (): UseMantenimientoReturn => {
     cargarDatos,
     crearNuevoComponente,
     actualizarComponenteExistente,
+    actualizarComponenteDesdeHistorial,
     eliminarComponenteExistente,
     
     // Utilidades

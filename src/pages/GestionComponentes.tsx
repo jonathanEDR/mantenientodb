@@ -6,6 +6,7 @@ import {
   ComponentesFilters,
   ComponenteModal
 } from '../components/mantenimiento';
+import HistorialComponente from '../components/mantenimiento/componentes/HistorialComponente';
 import { useMantenimiento, useModal } from '../hooks';
 
 export default function GestionComponentes() {
@@ -16,6 +17,7 @@ export default function GestionComponentes() {
     error,
     crearNuevoComponente,
     actualizarComponenteExistente,
+    actualizarComponenteDesdeHistorial,
     eliminarComponenteExistente,
     obtenerAeronaveNombre
   } = useMantenimiento();
@@ -33,6 +35,10 @@ export default function GestionComponentes() {
   const [filtroCategoria, setFiltroCategoria] = React.useState('');
   const [filtroEstado, setFiltroEstado] = React.useState('');
   const [filtroBusqueda, setFiltroBusqueda] = React.useState('');
+
+  // Estados para el módulo de historial
+  const [componenteHistorial, setComponenteHistorial] = React.useState<IComponente | null>(null);
+  const [historialAbierto, setHistorialAbierto] = React.useState(false);
 
   // Filtrar componentes localmente
   const componentesFiltrados = React.useMemo(() => {
@@ -68,6 +74,30 @@ export default function GestionComponentes() {
 
   const manejarEliminar = async (componente: IComponente) => {
     await eliminarComponenteExistente(componente);
+  };
+
+  const manejarVerDetalles = (componente: IComponente) => {
+    setComponenteHistorial(componente);
+    setHistorialAbierto(true);
+  };
+
+  const cerrarHistorial = () => {
+    setHistorialAbierto(false);
+    setComponenteHistorial(null);
+  };
+
+  const manejarActualizacionHistorial = async (componenteId: string, data: any) => {
+    try {
+      await actualizarComponenteDesdeHistorial(componenteId, data);
+      // Actualizar el componente en el estado local
+      if (componenteHistorial) {
+        const componenteActualizado = { ...componenteHistorial, ...data };
+        setComponenteHistorial(componenteActualizado);
+      }
+    } catch (error) {
+      console.error('Error al actualizar componente desde historial:', error);
+      throw error;
+    }
   };
 
   if (loading) {
@@ -127,6 +157,7 @@ export default function GestionComponentes() {
           aeronaves={aeronaves}
           onEdit={abrirModal}
           onDelete={manejarEliminar}
+          onViewDetails={manejarVerDetalles}
         />
 
         {/* Modal */}
@@ -138,6 +169,16 @@ export default function GestionComponentes() {
           aeronaves={aeronaves}
           loading={modalLoading}
         />
+
+        {/* Módulo de Historial */}
+        {historialAbierto && componenteHistorial && (
+          <HistorialComponente
+            componente={componenteHistorial}
+            aeronaves={aeronaves}
+            onClose={cerrarHistorial}
+            onUpdate={manejarActualizacionHistorial}
+          />
+        )}
       </div>
     </DashboardLayout>
   );

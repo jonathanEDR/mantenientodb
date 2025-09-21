@@ -10,6 +10,7 @@ interface ComponentesTableProps {
   loading?: boolean;
   onEdit: (componente: IComponente) => void;
   onDelete: (componente: IComponente) => void;
+  onViewDetails: (componente: IComponente) => void;
 }
 
 export default function ComponentesTable({
@@ -17,11 +18,19 @@ export default function ComponentesTable({
   aeronaves,
   loading = false,
   onEdit,
-  onDelete
+  onDelete,
+  onViewDetails
 }: ComponentesTableProps) {
-  const obtenerNombreAeronave = (matricula?: string) => {
-    if (!matricula) return 'No asignada';
-    const aeronave = aeronaves.find(a => a.matricula === matricula);
+  const obtenerNombreAeronave = (aeronaveActual?: string | IAeronave) => {
+    if (!aeronaveActual) return 'No asignada';
+    
+    // Si es un objeto (datos poblados)
+    if (typeof aeronaveActual === 'object') {
+      return `${aeronaveActual.matricula} - ${aeronaveActual.modelo}`;
+    }
+    
+    // Si es un string (ObjectId), buscar en la lista de aeronaves
+    const aeronave = aeronaves.find(a => a._id === aeronaveActual || a.matricula === aeronaveActual);
     return aeronave ? `${aeronave.matricula} - ${aeronave.modelo}` : 'N/A';
   };
 
@@ -62,7 +71,7 @@ export default function ComponentesTable({
     {
       key: 'aeronaveActual',
       title: 'Aeronave',
-      render: (value: string) => (
+      render: (value: string | IAeronave) => (
         <span className="text-sm text-gray-900">{obtenerNombreAeronave(value)}</span>
       )
     },
@@ -87,6 +96,25 @@ export default function ComponentesTable({
         <span className="text-sm text-gray-900">
           {value ? new Date(value).toLocaleDateString() : 'No especificada'}
         </span>
+      )
+    },
+    {
+      key: 'acciones',
+      title: 'Acciones',
+      render: (value: any, record: IComponente) => (
+        <div className="flex space-x-2">
+          <button
+            onClick={() => onViewDetails(record)}
+            className="inline-flex items-center px-3 py-1 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 transition-colors"
+            title="Ver detalles y gestionar componente"
+          >
+            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            Ver Más
+          </button>
+        </div>
       )
     }
   ];

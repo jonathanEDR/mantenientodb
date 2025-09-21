@@ -399,7 +399,9 @@ const DashboardMantenimiento: React.FC = () => {
                             <div className="text-sm text-gray-500">{componente.nombre}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {componente.aeronaveActual || 'En almacén'}
+                            {typeof componente.aeronaveActual === 'string' 
+                              ? componente.aeronaveActual 
+                              : componente.aeronaveActual?.matricula || 'En almacén'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {componente.categoria}
