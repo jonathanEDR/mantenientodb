@@ -9,7 +9,7 @@ interface ComponentesFiltersProps {
   onCategoriaChange: (categoria: string) => void;
   onEstadoChange: (estado: string) => void;
   onBusquedaChange: (busqueda: string) => void;
-  onAdd: () => void;
+  onAdd?: () => void; // Opcional
 }
 
 export default function ComponentesFilters({

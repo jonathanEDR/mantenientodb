@@ -9,7 +9,9 @@ const AeronaveList: React.FC<IAeronaveListProps> = ({
   onEditar,
   onEliminar,
   onGestionarHoras,
-  obtenerColorEstado
+  obtenerColorEstado,
+  onVerMonitoreo,
+  onConfigurarMonitoreo
 }) => {
   if (aeronaves.length === 0) {
     return (
@@ -46,6 +48,8 @@ const AeronaveList: React.FC<IAeronaveListProps> = ({
               onEliminar={onEliminar}
               onGestionarHoras={onGestionarHoras}
               obtenerColorEstado={obtenerColorEstado}
+              onVerMonitoreo={onVerMonitoreo}
+              onConfigurarMonitoreo={onConfigurarMonitoreo}
             />
           ))}
         </div>

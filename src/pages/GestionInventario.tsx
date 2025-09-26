@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import ComponentesAeronave from '../components/mantenimiento/ComponentesAeronave';
 import AeronaveList from '../components/inventario/AeronaveList';
@@ -16,6 +17,7 @@ import { IAeronave } from '../types/inventario';
 
 const GestionInventario: React.FC = () => {
   // Hooks personalizados
+  const navigate = useNavigate();
   const { aeronaves, estadisticas, loading, error, cargarDatos } = useInventario();
   const vista = useVistaInventario();
   const formulario = useFormularioAeronave(cargarDatos);
@@ -236,6 +238,14 @@ const GestionInventario: React.FC = () => {
                 onEliminar={manejarEliminarAeronave}
                 onGestionarHoras={manejarGestionHoras}
                 obtenerColorEstado={obtenerColorEstado}
+                onVerMonitoreo={(matricula) => {
+                  // Navegar a página de monitoreo con filtro por matrícula
+                  navigate(`/monitoreo?matricula=${matricula}`);
+                }}
+                onConfigurarMonitoreo={(matricula) => {
+                  // Por ahora navegar a gestión de catálogo de control
+                  navigate('/herramientas/control-monitoreo');
+                }}
               />
             )}
           </>

@@ -148,7 +148,6 @@ export default function GestionComponentes() {
           onCategoriaChange={setFiltroCategoria}
           onEstadoChange={setFiltroEstado}
           onBusquedaChange={setFiltroBusqueda}
-          onAdd={() => abrirModal()}
         />
 
         {/* Tabla */}

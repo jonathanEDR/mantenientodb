@@ -3,6 +3,7 @@ import { IComponente, EstadoComponente, ComponenteCategoria } from '../../../typ
 import { IAeronave } from '../../../types/inventario';
 import MantenimientoModal from '../shared/MantenimientoModal';
 import { FormField, FormActions } from '../shared/FormComponents';
+import { useCatalogoComponentes } from '../../../hooks';
 
 interface ComponenteModalProps {
   isOpen: boolean;
@@ -21,13 +22,35 @@ export default function ComponenteModal({
   aeronaves,
   loading = false
 }: ComponenteModalProps) {
+  // Hook para obtener catálogo de componentes
+  const { categoriaOptions, loading: catalogoLoading, error: catalogoError } = useCatalogoComponentes();
+  
+  // Categorías estáticas como fallback
+  const categoriasEstaticas = [
+    { value: 'FUSELAJE', label: 'Fuselaje' },
+    { value: 'MOTOR_PRINCIPAL', label: 'Motor Principal' },
+    { value: 'TRANSMISION_PRINCIPAL', label: 'Transmisión Principal' },
+    { value: 'CUBO_ROTOR_PRINCIPAL', label: 'Cubo Rotor Principal' },
+    { value: 'PALAS_ROTOR_PRINCIPAL', label: 'Palas Rotor Principal' },
+    { value: 'PLATO_CICLICO', label: 'Plato Cíclico' },
+    { value: 'OTROS', label: 'Otros' }
+  ];
+
+  // Usar categorías del catálogo si están disponibles, sino usar estáticas
+  const categoriasDisponibles = React.useMemo(() => {
+    if (!catalogoLoading && !catalogoError && categoriaOptions.length > 0) {
+      return categoriaOptions;
+    }
+    return categoriasEstaticas;
+  }, [categoriaOptions, catalogoLoading, catalogoError]);
+
   const [formData, setFormData] = React.useState({
     nombre: '',
-    categoria: ComponenteCategoria.FUSELAJE,
+    categoria: '', // Inicializar vacío, se establecerá cuando cargue el catálogo
     numeroSerie: '',
     numeroParte: '',
     fabricante: '',
-    fechaFabricacion: '',
+    fechaFabricacion: new Date().toISOString().split('T')[0], // Fecha actual por defecto
     aeronaveActual: '',
     estado: EstadoComponente.EN_ALMACEN,
     ubicacionFisica: '',
@@ -48,7 +71,7 @@ export default function ComponenteModal({
 
       setFormData({
         nombre: componente.nombre || '',
-        categoria: componente.categoria || ComponenteCategoria.FUSELAJE,
+        categoria: componente.categoria || '', // Mantener el valor original del componente
         numeroSerie: componente.numeroSerie || '',
         numeroParte: componente.numeroParte || '',
         fabricante: componente.fabricante || '',
@@ -61,18 +84,31 @@ export default function ComponenteModal({
     } else {
       setFormData({
         nombre: '',
-        categoria: ComponenteCategoria.FUSELAJE,
+        categoria: '', // Se establecerá en el useEffect separado
         numeroSerie: '',
         numeroParte: '',
         fabricante: '',
-        fechaFabricacion: '',
+        fechaFabricacion: new Date().toISOString().split('T')[0], // Fecha actual por defecto
         aeronaveActual: '',
         estado: EstadoComponente.EN_ALMACEN,
         ubicacionFisica: '',
         observaciones: ''
       });
     }
-  }, [componente]);
+  }, [componente]); // Solo depende del componente, no de las categorías
+
+  // Efecto separado para establecer categoría por defecto cuando se abre modal nuevo
+  React.useEffect(() => {
+    if (!componente && isOpen && categoriasDisponibles.length > 0) {
+      // Solo actualizar si la categoría está vacía
+      setFormData(prev => {
+        if (!prev.categoria) {
+          return { ...prev, categoria: categoriasDisponibles[0].value };
+        }
+        return prev;
+      });
+    }
+  }, [isOpen, componente, categoriasDisponibles]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,25 +135,7 @@ export default function ComponenteModal({
     onSubmit(submitData);
   };
 
-  const categoriaOptions = [
-    { value: 'FUSELAJE', label: 'Fuselaje' },
-    { value: 'MOTOR_PRINCIPAL', label: 'Motor Principal' },
-    { value: 'TRANSMISION_PRINCIPAL', label: 'Transmisión Principal' },
-    { value: 'CUBO_ROTOR_PRINCIPAL', label: 'Cubo Rotor Principal' },
-    { value: 'PALAS_ROTOR_PRINCIPAL', label: 'Palas Rotor Principal' },
-    { value: 'PLATO_CICLICO', label: 'Plato Cíclico' },
-    { value: 'CAJA_30_GRADOS', label: 'Caja 30 Grados' },
-    { value: 'CUBO_ROTOR_COLA', label: 'Cubo Rotor Cola' },
-    { value: 'PALAS_ROTOR_COLA', label: 'Palas Rotor Cola' },
-    { value: 'STARTER_GENERADOR', label: 'Starter Generador' },
-    { value: 'BATERIAS', label: 'Baterías' },
-    { value: 'SISTEMA_HIDRAULICO', label: 'Sistema Hidráulico' },
-    { value: 'TREN_ATERRIZAJE', label: 'Tren de Aterrizaje' },
-    { value: 'SISTEMA_ELECTRICO', label: 'Sistema Eléctrico' },
-    { value: 'INSTRUMENTACION', label: 'Instrumentación' },
-    { value: 'CONTROLES_VUELO', label: 'Controles de Vuelo' },
-    { value: 'OTROS', label: 'Otros' }
-  ];
+
 
   const estadoOptions = [
     { value: 'INSTALADO', label: 'Instalado' },
@@ -143,6 +161,15 @@ export default function ComponenteModal({
       title={componente ? 'Editar Componente' : 'Nuevo Componente'}
       size="xl"
     >
+      {catalogoError && (
+        <div className="mb-4 p-3 bg-yellow-100 border border-yellow-300 rounded-md">
+          <div className="text-yellow-700 text-sm">
+            <strong>Advertencia:</strong> No se pudo cargar el catálogo de componentes. 
+            Se mostrarán categorías por defecto.
+          </div>
+        </div>
+      )}
+      
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
@@ -160,7 +187,7 @@ export default function ComponenteModal({
             value={formData.categoria}
             onChange={(value) => setFormData({...formData, categoria: value})}
             required
-            options={categoriaOptions}
+            options={categoriasDisponibles}
           />
 
           <FormField

@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { IResumenDashboard, IAlerta } from '../types/mantenimiento';
 import { obtenerResumenDashboard, obtenerAlertas } from '../utils/mantenimientoApi';
+import { useMonitoreoFlota } from '../hooks/monitoreo';
+import { EstadoMonitoreoMedio } from '../components/monitoreo';
 
 const DashboardMantenimiento: React.FC = () => {
   const navigate = useNavigate();
@@ -10,6 +12,14 @@ const DashboardMantenimiento: React.FC = () => {
   const [alertas, setAlertas] = useState<IAlerta[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Hook para monitoreo de flota
+  const {
+    aeronavesFiltrasdas,
+    estadisticas: estadisticasFlota,
+    loading: loadingFlota,
+    error: errorFlota
+  } = useMonitoreoFlota();
 
   // Función para cargar datos del dashboard
   const cargarDatosDashboard = async () => {
@@ -300,54 +310,98 @@ const DashboardMantenimiento: React.FC = () => {
               </div>
             </div>
 
-            {/* Alertas Críticas */}
+            {/* Monitoreo de Flota */}
             <div className="bg-white rounded-lg shadow">
               <div className="px-6 py-4 border-b border-gray-200">
                 <h2 className="text-lg font-medium text-gray-900 flex items-center">
-                  <svg className="w-5 h-5 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  <svg className="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  Alertas del Sistema ({alertas.length})
+                  Monitoreo de Flota ({estadisticasFlota.totalAeronaves} aeronaves)
                 </h2>
               </div>
               
-              {alertas.length === 0 ? (
+              {loadingFlota ? (
                 <div className="text-center py-12">
-                  <svg className="w-12 h-12 text-green-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+                  <p className="text-gray-500 mt-2">Cargando monitoreo...</p>
+                </div>
+              ) : errorFlota ? (
+                <div className="text-center py-12">
+                  <svg className="w-12 h-12 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z" />
                   </svg>
-                  <p className="text-gray-500">¡Excelente! No hay alertas críticas en este momento</p>
+                  <p className="text-red-500">Error al cargar el monitoreo de flota</p>
+                </div>
+              ) : aeronavesFiltrasdas.length === 0 ? (
+                <div className="text-center py-12">
+                  <svg className="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  </svg>
+                  <p className="text-gray-500">No hay aeronaves registradas</p>
                 </div>
               ) : (
-                <div className="divide-y divide-gray-200">
-                  {alertas.slice(0, 10).map((alerta, index) => (
-                    <div key={index} className="p-6">
-                      <div className="flex items-start space-x-3">
-                        <div className="flex-shrink-0">
-                          {obtenerIconoSeveridad(alerta.severidad)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium text-gray-900">{alerta.mensaje}</p>
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${obtenerColorSeveridad(alerta.severidad)}`}>
-                              {alerta.severidad.toUpperCase()}
-                            </span>
-                          </div>
-                          <div className="mt-1 text-sm text-gray-500">
-                            {alerta.aeronave && <span>Aeronave: {alerta.aeronave}</span>}
-                            {alerta.componente && <span> • Componente: {alerta.componente}</span>}
-                            {alerta.numeroOrden && <span> • Orden: {alerta.numeroOrden}</span>}
-                          </div>
-                        </div>
+                <div className="p-6">
+                  {/* Estadísticas resumidas */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div className="bg-green-50 rounded-lg p-4">
+                      <div className="text-lg font-bold text-green-900">
+                        {estadisticasFlota.promedioSalud}%
                       </div>
+                      <div className="text-sm text-green-600">Salud Promedio</div>
                     </div>
-                  ))}
-                  
-                  {alertas.length > 10 && (
-                    <div className="px-6 py-3 bg-gray-50 text-center">
-                      <p className="text-sm text-gray-600">
-                        y {alertas.length - 10} alertas más...
-                      </p>
+                    <div className="bg-red-50 rounded-lg p-4">
+                      <div className="text-lg font-bold text-red-900">
+                        {estadisticasFlota.totalAlertasCriticas}
+                      </div>
+                      <div className="text-sm text-red-600">Alertas Críticas</div>
+                    </div>
+                    <div className="bg-yellow-50 rounded-lg p-4">
+                      <div className="text-lg font-bold text-yellow-900">
+                        {estadisticasFlota.totalAlertasProximas}
+                      </div>
+                      <div className="text-sm text-yellow-600">Próximas a Vencer</div>
+                    </div>
+                    <div className="bg-purple-50 rounded-lg p-4">
+                      <div className="text-lg font-bold text-purple-900">
+                        {estadisticasFlota.aeronavesConProblemas}
+                      </div>
+                      <div className="text-sm text-purple-600">Requieren Atención</div>
+                    </div>
+                  </div>
+
+                  {/* Lista de aeronaves - Grid medio */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {(() => {
+                      // Primero aeronaves con problemas, luego las que están bien
+                      const aeronavesConProblemas = aeronavesFiltrasdas
+                        .filter(aeronave => aeronave.alertasCriticas > 0 || aeronave.alertasProximas > 0);
+                      const aeronavesSinProblemas = aeronavesFiltrasdas
+                        .filter(aeronave => aeronave.alertasCriticas === 0 && aeronave.alertasProximas === 0);
+                      
+                      const aeronavesParaMostrar = [
+                        ...aeronavesConProblemas,
+                        ...aeronavesSinProblemas
+                      ].slice(0, 4);
+
+                      return aeronavesParaMostrar.map((aeronave) => (
+                        <EstadoMonitoreoMedio
+                          key={aeronave.aeronaveId}
+                          resumen={aeronave}
+                          onClickDetalle={(matricula: string) => navigate(`/mantenimiento/monitoreo?matricula=${matricula}`)}
+                        />
+                      ));
+                    })()}
+                  </div>
+
+                  {aeronavesFiltrasdas.length > 4 && (
+                    <div className="text-center mt-4">
+                      <button
+                        onClick={() => navigate('/mantenimiento/monitoreo')}
+                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                      >
+                        Ver todas las aeronaves →
+                      </button>
                     </div>
                   )}
                 </div>
@@ -362,7 +416,7 @@ const DashboardMantenimiento: React.FC = () => {
                 </h2>
               </div>
               
-              {resumen.proximosVencimientos.length === 0 ? (
+              {resumen?.proximosVencimientos.length === 0 ? (
                 <div className="text-center py-12">
                   <svg className="w-12 h-12 text-green-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -392,7 +446,7 @@ const DashboardMantenimiento: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {resumen.proximosVencimientos.map((componente) => (
+                      {resumen?.proximosVencimientos.map((componente) => (
                         <tr key={componente._id} className="hover:bg-gray-50">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm font-medium text-gray-900">{componente.numeroSerie}</div>

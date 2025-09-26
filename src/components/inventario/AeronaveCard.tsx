@@ -1,5 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { IAeronaveCardProps } from '../../types/inventario/index';
+import { useResumenMonitoreo } from '../../hooks/monitoreo';
+import { EstadoMonitoreoCompacto, AlertaCompacta } from '../monitoreo';
+import { EstadoAlerta } from '../../types/monitoreo';
+import { obtenerAlertasPrioritarias, calcularNivelCriticidad } from '../../utils/monitoreoUtils';
 
 const AeronaveCard: React.FC<IAeronaveCardProps> = ({
   aeronave,
@@ -7,8 +11,12 @@ const AeronaveCard: React.FC<IAeronaveCardProps> = ({
   onEditar,
   onEliminar,
   onGestionarHoras,
-  obtenerColorEstado
+  obtenerColorEstado,
+  onVerMonitoreo,
+  onConfigurarMonitoreo
 }) => {
+  const [mostrarMonitoreo, setMostrarMonitoreo] = useState(true);
+  const { resumen, loading: loadingMonitoreo } = useResumenMonitoreo(aeronave.matricula);
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-lg hover:border-blue-200 transition-all duration-300 overflow-hidden group">
       {/* Header de la tarjeta */}
@@ -82,6 +90,125 @@ const AeronaveCard: React.FC<IAeronaveCardProps> = ({
             </div>
           )}
         </div>
+
+        {/* Sección de Monitoreo */}
+        {mostrarMonitoreo && (
+          <div className="border-t border-gray-200 pt-4">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-medium text-gray-700 flex items-center">
+                <svg className="w-4 h-4 text-blue-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Estado de Monitoreo
+              </h4>
+              <button
+                onClick={() => setMostrarMonitoreo(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+                title="Ocultar monitoreo"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {loadingMonitoreo ? (
+              <div className="flex items-center justify-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                <span className="ml-2 text-sm text-gray-500">Cargando monitoreo...</span>
+              </div>
+            ) : resumen ? (
+              <div className="space-y-3">
+                {/* Indicador de estado general */}
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center">
+                    <div className={`w-3 h-3 rounded-full mr-3 ${
+                      calcularNivelCriticidad(resumen) === EstadoAlerta.VENCIDO
+                        ? 'bg-red-500 animate-pulse'
+                        : calcularNivelCriticidad(resumen) === EstadoAlerta.PROXIMO
+                          ? 'bg-yellow-500'
+                          : 'bg-green-500'
+                    }`} />
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {resumen.alertasCriticas > 0
+                          ? 'Requiere Atención'
+                          : resumen.alertasProximas > 0
+                            ? 'Monitorear'
+                            : 'Al Día'
+                        }
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {resumen.totalAlertas} control{resumen.totalAlertas !== 1 ? 'es' : ''} monitoreado{resumen.totalAlertas !== 1 ? 's' : ''}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-bold text-gray-900">
+                      {Math.round(((resumen.alertasOk / resumen.totalAlertas) * 100) || 0)}%
+                    </div>
+                    <div className="text-xs text-gray-500">Salud</div>
+                  </div>
+                </div>
+
+                {/* Alertas prioritarias */}
+                {(resumen.alertasCriticas > 0 || resumen.alertasProximas > 0) && (
+                  <div className="space-y-2">
+                    <div className="text-xs font-medium text-gray-600 mb-2">
+                      Alertas Prioritarias:
+                    </div>
+                    {obtenerAlertasPrioritarias(resumen.alertas || []).slice(0, 2).map((alerta, index) => (
+                      <AlertaCompacta
+                        key={`${alerta.descripcionCodigo}-${index}`}
+                        alerta={alerta}
+                      />
+                    ))}
+                    {(resumen.alertasCriticas + resumen.alertasProximas) > 2 && (
+                      <div className="text-xs text-blue-600 text-center">
+                        +{(resumen.alertasCriticas + resumen.alertasProximas) - 2} alerta{((resumen.alertasCriticas + resumen.alertasProximas) - 2) !== 1 ? 's' : ''} más
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Botón para ver detalles */}
+                <button
+                  onClick={() => onVerMonitoreo?.(aeronave.matricula)}
+                  className="w-full text-center text-xs text-blue-600 hover:text-blue-800 py-2 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
+                >
+                  Ver detalles del monitoreo
+                </button>
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <div className="text-sm text-gray-500 mb-2">
+                  No hay datos de monitoreo disponibles
+                </div>
+                <button
+                  onClick={() => onConfigurarMonitoreo?.(aeronave.matricula)}
+                  className="text-xs text-blue-600 hover:text-blue-800"
+                >
+                  Configurar monitoreo
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Botón para mostrar monitoreo si está oculto */}
+        {!mostrarMonitoreo && (
+          <div className="border-t border-gray-200 pt-3">
+            <button
+              onClick={() => setMostrarMonitoreo(true)}
+              className="w-full text-center text-xs text-gray-500 hover:text-gray-700 py-2 hover:bg-gray-50 rounded-lg transition-colors flex items-center justify-center"
+            >
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Mostrar monitoreo
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Footer con acciones */}

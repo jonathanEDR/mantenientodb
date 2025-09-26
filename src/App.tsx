@@ -15,6 +15,7 @@ import GestionInspecciones from './pages/GestionInspecciones';
 import GestionHerramientas from './pages/GestionHerramientas';
 import GestionCatalogoComponentes from './pages/GestionCatalogoComponentes';
 import GestionCatalogoControlMonitoreo from './pages/GestionCatalogoControlMonitoreo';
+import MonitoreoFlota from './pages/MonitoreoFlota';
 
 export default function App() {
   return (
@@ -84,6 +85,8 @@ export default function App() {
           }
         />
 
+
+
         <Route
           path="/mantenimiento"
           element={
@@ -132,6 +135,20 @@ export default function App() {
             <>
               <SignedIn>
                 <GestionInspecciones />
+              </SignedIn>
+              <SignedOut>
+                <RedirectToSignIn />
+              </SignedOut>
+            </>
+          }
+        />
+
+        <Route
+          path="/mantenimiento/monitoreo"
+          element={
+            <>
+              <SignedIn>
+                <MonitoreoFlota />
               </SignedIn>
               <SignedOut>
                 <RedirectToSignIn />
