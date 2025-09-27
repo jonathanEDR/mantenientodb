@@ -5,6 +5,7 @@ import { IResumenDashboard, IAlerta } from '../types/mantenimiento';
 import { obtenerResumenDashboard, obtenerAlertas } from '../utils/mantenimientoApi';
 // Hook de monitoreo viejo removido - ahora usamos MonitoreoGranularDashboard
 import MonitoreoGranularDashboard from '../components/monitoreo/MonitoreoGranularDashboard';
+import ProtectedButton, { ProtectedClickable, useProtectedAction } from '../components/common/ProtectedButton';
 
 const DashboardMantenimiento: React.FC = () => {
   const navigate = useNavigate();
@@ -12,6 +13,9 @@ const DashboardMantenimiento: React.FC = () => {
   const [alertas, setAlertas] = useState<IAlerta[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Hook para proteger acciones de navegación
+  const { executeProtected } = useProtectedAction(300);
 
   // Hook de monitoreo viejo removido - ahora se maneja en MonitoreoGranularDashboard
 
@@ -107,36 +111,45 @@ const DashboardMantenimiento: React.FC = () => {
             <h1 className="text-3xl font-bold text-gray-900">Dashboard de Mantenimiento</h1>
             <p className="text-gray-600">Resumen general del estado de mantenimiento de la flota</p>
           </div>
-          <button
-            onClick={cargarDatosDashboard}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+          <ProtectedButton
+            onClick={async () => await executeProtected(cargarDatosDashboard)}
+            variant="primary"
+            loadingText="Actualizando..."
+            className="flex items-center space-x-2"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
             <span>Actualizar</span>
-          </button>
+          </ProtectedButton>
         </div>
 
         {/* Error */}
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <p className="text-red-600">{error}</p>
-            <button
-              onClick={cargarDatosDashboard}
+            <ProtectedButton
+              onClick={async () => await executeProtected(cargarDatosDashboard)}
               className="mt-2 text-red-600 hover:text-red-800 font-medium"
+              variant="custom"
+              size="sm"
+              loadingText="Reintentando..."
             >
               Reintentar
-            </button>
+            </ProtectedButton>
           </div>
         )}
 
         {/* Tarjetas de Navegación Rápida */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Gestión de Componentes */}
-          <div 
-            onClick={() => navigate('/mantenimiento/componentes')}
-            className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-blue-500 p-6 group"
+          <ProtectedClickable
+            onClick={() => executeProtected(() => {
+              console.log('📊 [DASHBOARD] Navegando a gestión de componentes');
+              navigate('/mantenimiento/componentes');
+            })}
+            className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow border-l-4 border-blue-500 p-6 group"
+            debounceMs={300}
           >
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -161,12 +174,16 @@ const DashboardMantenimiento: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </div>
-          </div>
+          </ProtectedClickable>
 
           {/* Órdenes de Trabajo */}
-          <div 
-            onClick={() => navigate('/mantenimiento/ordenes')}
-            className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-orange-500 p-6 group"
+          <ProtectedClickable
+            onClick={() => executeProtected(() => {
+              console.log('📊 [DASHBOARD] Navegando a órdenes de trabajo');
+              navigate('/mantenimiento/ordenes');
+            })}
+            className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow border-l-4 border-orange-500 p-6 group"
+            debounceMs={300}
           >
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -191,12 +208,16 @@ const DashboardMantenimiento: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </div>
-          </div>
+          </ProtectedClickable>
 
           {/* Inspecciones */}
-          <div 
-            onClick={() => navigate('/mantenimiento/inspecciones')}
-            className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-green-500 p-6 group"
+          <ProtectedClickable
+            onClick={() => executeProtected(() => {
+              console.log('📊 [DASHBOARD] Navegando a inspecciones');
+              navigate('/mantenimiento/inspecciones');
+            })}
+            className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow border-l-4 border-green-500 p-6 group"
+            debounceMs={300}
           >
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -221,7 +242,7 @@ const DashboardMantenimiento: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </div>
-          </div>
+          </ProtectedClickable>
         </div>
 
         {/* Resumen General */}
@@ -309,12 +330,16 @@ const DashboardMantenimiento: React.FC = () => {
             {/* Monitoreo Granular de Componentes */}
             <MonitoreoGranularDashboard
               onClickComponente={(componenteId: string) => {
-                // Navegar a la gestión de componentes con el componente seleccionado
-                navigate(`/mantenimiento/componentes?componenteId=${componenteId}`);
+                executeProtected(() => {
+                  console.log('📊 [DASHBOARD] Navegando a componente:', componenteId);
+                  navigate(`/mantenimiento/componentes?componenteId=${componenteId}`);
+                });
               }}
               onClickAeronave={(aeronaveId: string) => {
-                // Navegar al monitoreo específico de la aeronave
-                navigate(`/mantenimiento/aeronaves/${aeronaveId}/componentes`);
+                executeProtected(() => {
+                  console.log('📊 [DASHBOARD] Navegando a aeronave:', aeronaveId);
+                  navigate(`/mantenimiento/aeronaves/${aeronaveId}/componentes`);
+                });
               }}
             />
 

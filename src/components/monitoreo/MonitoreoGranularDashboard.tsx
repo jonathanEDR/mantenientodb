@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useMonitoreoGranular, IResumenFlotaGranular, IAlertaComponente } from '../../hooks/useMonitoreoGranular';
 import AlertaComponente from './AlertaComponente';
+import ProtectedButton, { ProtectedClickable, useProtectedAction } from '../common/ProtectedButton';
 
 interface MonitoreoGranularDashboardProps {
   onClickComponente?: (componenteId: string) => void;
@@ -25,17 +26,42 @@ const MonitoreoGranularDashboard: React.FC<MonitoreoGranularDashboardProps> = ({
     cargarResumenFlota();
   }, [cargarResumenFlota]);
 
-  // Funciones para manejar clics
-  const handleClickComponente = (alerta: IAlertaComponente) => {
-    if (onClickComponente) {
-      onClickComponente(alerta.componenteId);
-    }
+  // Hook para proteger acciones
+  const { executeProtected } = useProtectedAction(500); // 500ms debounce
+
+  // Funciones para manejar clics protegidos
+  const handleClickComponente = async (alerta: IAlertaComponente) => {
+    await executeProtected(() => {
+      if (onClickComponente) {
+        console.log('📊 [DASHBOARD] Navegando a componente:', alerta.componenteId);
+        onClickComponente(alerta.componenteId);
+      }
+    });
   };
 
-  const handleClickAeronave = (aeronaveId: string) => {
-    if (onClickAeronave) {
-      onClickAeronave(aeronaveId);
-    }
+  const handleClickAeronave = async (aeronaveId: string) => {
+    await executeProtected(() => {
+      if (onClickAeronave) {
+        console.log('📊 [DASHBOARD] Navegando a aeronave:', aeronaveId);
+        onClickAeronave(aeronaveId);
+      }
+    });
+  };
+
+  // Función protegida para refrescar datos
+  const handleRefresh = async () => {
+    await executeProtected(async () => {
+      console.log('🔄 [DASHBOARD] Refrescando datos de monitoreo');
+      await cargarResumenFlota();
+    });
+  };
+
+  // Función protegida para limpiar errores
+  const handleClearError = async () => {
+    await executeProtected(() => {
+      console.log('🧹 [DASHBOARD] Limpiando errores');
+      limpiarError();
+    });
   };
 
   if (loading) {
@@ -61,19 +87,24 @@ const MonitoreoGranularDashboard: React.FC<MonitoreoGranularDashboardProps> = ({
             <h3 className="text-lg font-semibold text-red-800 mb-2">Error de Monitoreo</h3>
             <p className="text-red-600 text-sm">{error}</p>
           </div>
-          <button
-            onClick={limpiarError}
+          <ProtectedButton
+            onClick={handleClearError}
             className="text-red-600 hover:text-red-800 transition-colors"
+            variant="custom"
+            size="sm"
+            title="Cerrar error"
           >
             ✕
-          </button>
+          </ProtectedButton>
         </div>
-        <button
-          onClick={cargarResumenFlota}
-          className="mt-4 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+        <ProtectedButton
+          onClick={handleRefresh}
+          className="mt-4"
+          variant="danger"
+          loadingText="Reintentando..."
         >
           Reintentar
-        </button>
+        </ProtectedButton>
       </div>
     );
   }
@@ -96,13 +127,16 @@ const MonitoreoGranularDashboard: React.FC<MonitoreoGranularDashboardProps> = ({
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl shadow-lg p-6 border border-blue-100">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-blue-900">📊 Monitoreo de Componentes</h2>
-          <button
-            onClick={cargarResumenFlota}
+          <ProtectedButton
+            onClick={handleRefresh}
             className="text-blue-600 hover:text-blue-800 transition-colors"
+            variant="custom"
+            size="sm"
             title="Refrescar datos"
+            loadingText="🔄"
           >
             🔄
-          </button>
+          </ProtectedButton>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -143,12 +177,14 @@ const MonitoreoGranularDashboard: React.FC<MonitoreoGranularDashboardProps> = ({
               <li>• Establecer controles y límites de monitoreo</li>
             </ul>
             <div className="flex justify-center space-x-3">
-              <button
+              <ProtectedButton
                 onClick={() => handleClickAeronave('')}
-                className="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition-colors text-sm"
+                variant="warning"
+                size="sm"
+                loadingText="Navegando..."
               >
                 Gestionar Componentes
-              </button>
+              </ProtectedButton>
             </div>
           </div>
         </div>
@@ -160,12 +196,17 @@ const MonitoreoGranularDashboard: React.FC<MonitoreoGranularDashboardProps> = ({
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-gray-900">🚨 Alertas Prioritarias de Componentes</h3>
             {resumenFlota.alertasPrioritarias.length > 5 && (
-              <button
-                onClick={() => setMostrarTodasAlertas(!mostrarTodasAlertas)}
+              <ProtectedButton
+                onClick={() => executeProtected(() => {
+                  console.log('👁️ [DASHBOARD] Toggleando vista de alertas');
+                  setMostrarTodasAlertas(!mostrarTodasAlertas);
+                })}
                 className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
+                variant="custom"
+                size="sm"
               >
                 {mostrarTodasAlertas ? 'Mostrar menos' : `Ver todas (${resumenFlota.alertasPrioritarias.length})`}
-              </button>
+              </ProtectedButton>
             )}
           </div>
 
@@ -174,7 +215,7 @@ const MonitoreoGranularDashboard: React.FC<MonitoreoGranularDashboardProps> = ({
               <AlertaComponente
                 key={`${alerta.componenteId}-${index}`}
                 alerta={alerta}
-                onClick={() => handleClickComponente(alerta)}
+onClick={() => handleClickComponente(alerta)}
                 compact={true}
               />
             ))}
@@ -193,10 +234,11 @@ const MonitoreoGranularDashboard: React.FC<MonitoreoGranularDashboardProps> = ({
               .sort((a, b) => b.resumen.componentesCriticos - a.resumen.componentesCriticos)
               .slice(0, 6)
               .map(aeronave => (
-                <div
+                <ProtectedClickable
                   key={aeronave.aeronaveId}
-                  className="bg-gradient-to-br from-gray-50 to-slate-50 rounded-xl p-4 border border-gray-200 hover:shadow-md transition-all duration-200 cursor-pointer"
+                  className="bg-gradient-to-br from-gray-50 to-slate-50 rounded-xl p-4 border border-gray-200 hover:shadow-md transition-all duration-200"
                   onClick={() => handleClickAeronave(aeronave.aeronaveId)}
+                  debounceMs={500}
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div>
@@ -224,7 +266,7 @@ const MonitoreoGranularDashboard: React.FC<MonitoreoGranularDashboardProps> = ({
                       <div className="text-gray-500">Vencidos</div>
                     </div>
                   </div>
-                </div>
+                </ProtectedClickable>
               ))}
           </div>
         </div>

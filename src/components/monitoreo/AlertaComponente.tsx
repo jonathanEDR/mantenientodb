@@ -1,5 +1,6 @@
 import React from 'react';
 import { IAlertaComponente } from '../../hooks/useMonitoreoGranular';
+import { ProtectedClickable, useProtectedAction } from '../common/ProtectedButton';
 
 interface AlertaComponenteProps {
   alerta: IAlertaComponente;
@@ -7,11 +8,22 @@ interface AlertaComponenteProps {
   compact?: boolean;
 }
 
-const AlertaComponente: React.FC<AlertaComponenteProps> = ({ 
-  alerta, 
-  onClick, 
-  compact = false 
+const AlertaComponente: React.FC<AlertaComponenteProps> = ({
+  alerta,
+  onClick,
+  compact = false
 }) => {
+  const { executeProtected } = useProtectedAction(400); // 400ms debounce para componentes
+
+  // Función protegida para manejar clics
+  const handleProtectedClick = async () => {
+    if (onClick) {
+      await executeProtected(() => {
+        console.log('🔧 [ALERTA COMPONENTE] Click en componente:', alerta.numeroSerie);
+        onClick();
+      });
+    }
+  };
   
   // Función para obtener el color según el estado
   const getEstadoColor = (estado: string, criticidad: string) => {
@@ -46,9 +58,10 @@ const AlertaComponente: React.FC<AlertaComponenteProps> = ({
 
   if (compact) {
     return (
-      <div 
-        className={`p-2 rounded-lg border cursor-pointer hover:shadow-md transition-all duration-200 ${getEstadoColor(alerta.estado, alerta.criticidad)}`}
-        onClick={onClick}
+      <ProtectedClickable
+        className={`p-2 rounded-lg border hover:shadow-md transition-all duration-200 ${getEstadoColor(alerta.estado, alerta.criticidad)}`}
+        onClick={handleProtectedClick}
+        debounceMs={400}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
@@ -68,14 +81,15 @@ const AlertaComponente: React.FC<AlertaComponenteProps> = ({
             </div>
           </div>
         </div>
-      </div>
+      </ProtectedClickable>
     );
   }
 
   return (
-    <div 
-      className={`p-4 rounded-xl border cursor-pointer hover:shadow-lg transition-all duration-300 ${getEstadoColor(alerta.estado, alerta.criticidad)}`}
-      onClick={onClick}
+    <ProtectedClickable
+      className={`p-4 rounded-xl border hover:shadow-lg transition-all duration-300 ${getEstadoColor(alerta.estado, alerta.criticidad)}`}
+      onClick={handleProtectedClick}
+      debounceMs={400}
     >
       {/* Header con componente y criticidad */}
       <div className="flex items-start justify-between mb-3">
@@ -139,7 +153,7 @@ const AlertaComponente: React.FC<AlertaComponenteProps> = ({
           </p>
         </div>
       </div>
-    </div>
+    </ProtectedClickable>
   );
 };
 
