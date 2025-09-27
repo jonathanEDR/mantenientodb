@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { IComponente, EstadoComponente } from '../../../types/mantenimiento';
 import { IAeronave } from '../../../types/inventario';
+import EstadosMonitoreoComponente from '../EstadosMonitoreoComponente';
 
 interface HistorialComponenteProps {
   componente: IComponente;
   aeronaves: IAeronave[];
   onClose: () => void;
   onUpdate: (componenteId: string, data: any) => Promise<void>;
+  initialTab?: 'info' | 'estado' | 'observaciones' | 'historial' | 'monitoreo';
 }
 
 interface RegistroHistorial {
@@ -22,9 +24,10 @@ export default function HistorialComponente({
   componente,
   aeronaves,
   onClose,
-  onUpdate
+  onUpdate,
+  initialTab = 'info'
 }: HistorialComponenteProps) {
-  const [activeTab, setActiveTab] = useState<'info' | 'estado' | 'observaciones' | 'historial'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'estado' | 'observaciones' | 'historial' | 'monitoreo'>(initialTab);
   const [loading, setLoading] = useState(false);
   
   // Estados para formularios
@@ -221,6 +224,7 @@ export default function HistorialComponente({
               { id: 'info', label: 'Información', icon: '📋' },
               { id: 'estado', label: 'Cambio de Estado', icon: '🔄' },
               { id: 'observaciones', label: 'Observaciones', icon: '📝' },
+              { id: 'monitoreo', label: 'Estados Monitoreo', icon: '📊' },
               { id: 'historial', label: 'Historial', icon: '📜' }
             ].map((tab) => (
               <button
@@ -422,6 +426,18 @@ export default function HistorialComponente({
                   </pre>
                 </div>
               )}
+            </div>
+          )}
+
+          {activeTab === 'monitoreo' && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Estados de Monitoreo</h3>
+              <EstadosMonitoreoComponente 
+                componenteId={componente._id!}
+                numeroSerie={componente.numeroSerie}
+                nombreComponente={componente.nombre}
+                className="bg-white"
+              />
             </div>
           )}
 

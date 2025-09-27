@@ -13,10 +13,12 @@ const axiosInstance: AxiosInstance = axios.create({
 axiosInstance.interceptors.request.use(
   async (config) => {
     try {
-      // Obtener token de Clerk si está disponible
-      const token = await (window as any).Clerk?.session?.getToken();
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+      // Verificar que Clerk esté disponible y cargado
+      if (typeof window !== 'undefined' && (window as any).Clerk?.session) {
+        const token = await (window as any).Clerk.session.getToken();
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
       }
     } catch (error) {
       console.warn('No se pudo obtener token de Clerk:', error);

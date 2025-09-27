@@ -7,6 +7,7 @@ import {
   ComponenteModal
 } from '../components/mantenimiento';
 import HistorialComponente from '../components/mantenimiento/componentes/HistorialComponente';
+import EstadosMonitoreoComponente from '../components/mantenimiento/EstadosMonitoreoComponente';
 import { useMantenimiento, useModal } from '../hooks';
 
 export default function GestionComponentes() {
@@ -39,6 +40,10 @@ export default function GestionComponentes() {
   // Estados para el módulo de historial
   const [componenteHistorial, setComponenteHistorial] = React.useState<IComponente | null>(null);
   const [historialAbierto, setHistorialAbierto] = React.useState(false);
+
+  // Estados para el módulo de monitoreo
+  const [componenteMonitoreo, setComponenteMonitoreo] = React.useState<IComponente | null>(null);
+  const [monitoreoAbierto, setMonitoreoAbierto] = React.useState(false);
 
   // Filtrar componentes localmente
   const componentesFiltrados = React.useMemo(() => {
@@ -84,6 +89,16 @@ export default function GestionComponentes() {
   const cerrarHistorial = () => {
     setHistorialAbierto(false);
     setComponenteHistorial(null);
+  };
+
+  const manejarVerMonitoreo = (componente: IComponente) => {
+    setComponenteMonitoreo(componente);
+    setMonitoreoAbierto(true);
+  };
+
+  const cerrarMonitoreo = () => {
+    setMonitoreoAbierto(false);
+    setComponenteMonitoreo(null);
   };
 
   const manejarActualizacionHistorial = async (componenteId: string, data: any) => {
@@ -157,6 +172,7 @@ export default function GestionComponentes() {
           onEdit={abrirModal}
           onDelete={manejarEliminar}
           onViewDetails={manejarVerDetalles}
+          onViewMonitoreo={manejarVerMonitoreo}
         />
 
         {/* Modal */}
@@ -177,6 +193,48 @@ export default function GestionComponentes() {
             onClose={cerrarHistorial}
             onUpdate={manejarActualizacionHistorial}
           />
+        )}
+
+        {/* Módulo de Monitoreo */}
+        {monitoreoAbierto && componenteMonitoreo && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-7xl max-h-[95vh] overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">
+                    Estados de Monitoreo - {componenteMonitoreo.nombre}
+                  </h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Número de Serie: {componenteMonitoreo.numeroSerie} | 
+                    Aeronave: {(() => {
+                      const aeronaveActual = componenteMonitoreo.aeronaveActual;
+                      if (!aeronaveActual) return 'No asignada';
+                      if (typeof aeronaveActual === 'object') {
+                        return `${aeronaveActual.matricula} - ${aeronaveActual.modelo}`;
+                      }
+                      return obtenerAeronaveNombre(aeronaveActual);
+                    })()}
+                  </p>
+                </div>
+                <button
+                  onClick={cerrarMonitoreo}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div className="overflow-auto" style={{ maxHeight: 'calc(95vh - 80px)' }}>
+                <EstadosMonitoreoComponente
+                  componenteId={componenteMonitoreo._id!}
+                  numeroSerie={componenteMonitoreo.numeroSerie}
+                  nombreComponente={componenteMonitoreo.nombre}
+                  className="p-6"
+                />
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </DashboardLayout>

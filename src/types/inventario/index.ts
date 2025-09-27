@@ -20,11 +20,8 @@ export interface IAeronaveCardProps {
   onVerComponentes: (aeronave: IAeronave) => void;
   onEditar: (aeronave: IAeronave) => void;
   onEliminar: (aeronave: IAeronave) => void;
-  onGestionarHoras: (aeronave: IAeronave) => void; // ← Nueva prop
+  onGestionarHoras: (aeronave: IAeronave) => void;
   obtenerColorEstado: (estado: string) => string;
-  // Callbacks opcionales para monitoreo
-  onVerMonitoreo?: (matricula: string) => void;
-  onConfigurarMonitoreo?: (matricula: string) => void;
 }
 
 export interface IAeronaveListProps {
@@ -33,11 +30,8 @@ export interface IAeronaveListProps {
   onVerComponentes: (aeronave: IAeronave) => void;
   onEditar: (aeronave: IAeronave) => void;
   onEliminar: (aeronave: IAeronave) => void;
-  onGestionarHoras: (aeronave: IAeronave) => void; // ← Nueva prop
+  onGestionarHoras: (aeronave: IAeronave) => void;
   obtenerColorEstado: (estado: string) => string;
-  // Callbacks opcionales para monitoreo
-  onVerMonitoreo?: (matricula: string) => void;
-  onConfigurarMonitoreo?: (matricula: string) => void;
 }
 
 // Props para el nuevo componente de gestión de horas

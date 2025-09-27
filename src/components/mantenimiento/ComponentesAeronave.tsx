@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import HistorialComponente from './componentes/HistorialComponente';
 import ComponenteModal from './componentes/ComponenteModal';
+import ResumenMonitoreoComponente from './componentes/ResumenMonitoreoComponente';
 import { IAeronave } from '../../types/inventario';
 import { IComponente, EstadoComponente, ComponenteCategoria } from '../../types/mantenimiento';
 import axiosInstance from '../../utils/axiosConfig';
@@ -26,6 +27,7 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
   // Estados para el modal de detalles/historial
   const [historialAbierto, setHistorialAbierto] = useState(false);
   const [componenteHistorial, setComponenteHistorial] = useState<IComponente | null>(null);
+  const [tabInicial, setTabInicial] = useState<'info' | 'estado' | 'observaciones' | 'historial' | 'monitoreo'>('info');
   
   // Estados para el modal de crear/editar componente
   const [modalComponenteAbierto, setModalComponenteAbierto] = useState(false);
@@ -169,7 +171,7 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
     }
   };
 
-  const abrirHistorial = (componente: IComponente) => {
+  const abrirHistorial = (componente: IComponente, tabDefault?: 'info' | 'estado' | 'observaciones' | 'historial' | 'monitoreo') => {
     // Log estratégico para gestión de horas
     console.log('📅 [HORAS] Abriendo historial de componente:', {
       nombre: componente.nombre,
@@ -177,13 +179,24 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
       horasAcumuladas: componente.vidaUtil?.find(v => v.unidad === 'HORAS')?.acumulado || 0,
       ultimaInspeccion: componente.proximaInspeccion || 'No programada'
     });
+    setTabInicial(tabDefault || 'info');
     setComponenteHistorial(componente);
     setHistorialAbierto(true);
+  };
+
+  const abrirMonitoreo = (componente: IComponente) => {
+    console.log('📊 [MONITOREO] Abriendo monitoreo de componente:', {
+      nombre: componente.nombre,
+      numeroSerie: componente.numeroSerie,
+    });
+    // Abrir historial con tab de monitoreo activo
+    abrirHistorial(componente, 'monitoreo');
   };
 
   const cerrarHistorial = () => {
     setHistorialAbierto(false);
     setComponenteHistorial(null);
+    setTabInicial('info'); // Reset tab inicial
   };
 
   const handleEliminarComponente = async (id: string) => {
@@ -237,95 +250,131 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
     componente, 
     onHistorial, 
     onEditar, 
-    onEliminar 
+    onEliminar,
+    onMonitoreo 
   }: { 
     componente: IComponente;
     onHistorial: (comp: IComponente) => void;
     onEditar: (comp: IComponente) => void;
     onEliminar: (id: string) => void;
+    onMonitoreo?: (comp: IComponente) => void;
   }) => (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+    <div className="bg-white border-0 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden">
       {/* Header de la tarjeta */}
-      <div className="p-4 border-b border-gray-100">
+      <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-5 border-b border-blue-100/50">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <h3 className="font-semibold text-gray-900 text-lg">{componente.nombre}</h3>
-            <p className="text-sm text-gray-500 mt-1">{componente.categoria}</p>
+            <h3 className="font-bold text-gray-900 text-lg tracking-tight">{componente.nombre}</h3>
+            <p className="text-sm text-blue-600/70 mt-1 font-medium">{componente.categoria}</p>
           </div>
-          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getEstadoColor(componente.estado)}`}>
-            <span className="mr-1">{getEstadoIcon(componente.estado)}</span>
+          <span className={`inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-semibold shadow-sm border ${getEstadoColor(componente.estado)}`}>
+            <span className="mr-1.5 text-sm">{getEstadoIcon(componente.estado)}</span>
             {componente.estado}
           </span>
         </div>
       </div>
 
       {/* Contenido de la tarjeta */}
-      <div className="p-4 space-y-3">
-        <div className="grid grid-cols-2 gap-2 text-sm">
-          <div>
-            <span className="text-gray-500">N° Serie:</span>
-            <p className="font-medium text-gray-900">{componente.numeroSerie}</p>
+      <div className="p-5 space-y-4">
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="bg-gray-50/80 rounded-xl p-3 border border-gray-100">
+            <span className="text-gray-500 text-xs font-medium uppercase tracking-wider">Serie</span>
+            <p className="font-semibold text-gray-900 mt-1 font-mono">{componente.numeroSerie}</p>
           </div>
-          <div>
-            <span className="text-gray-500">N° Parte:</span>
-            <p className="font-medium text-gray-900">{componente.numeroParte}</p>
+          <div className="bg-gray-50/80 rounded-xl p-3 border border-gray-100">
+            <span className="text-gray-500 text-xs font-medium uppercase tracking-wider">Parte</span>
+            <p className="font-semibold text-gray-900 mt-1 font-mono">{componente.numeroParte}</p>
+          </div>
+        </div>
+
+        {/* Resumen de Estados de Monitoreo - Rediseñado */}
+        <div className="bg-gradient-to-r from-blue-50/80 to-indigo-50/80 rounded-xl p-4 border border-blue-100/50">
+          <div className="text-sm">
+            <div className="flex items-center mb-3">
+              <span className="text-blue-600 mr-2">📊</span>
+              <span className="text-blue-800 font-semibold">Controles de Monitoreo</span>
+            </div>
+            <ResumenMonitoreoComponente 
+              componenteId={componente._id!}
+              compactMode={true}
+              className=""
+            />
           </div>
         </div>
 
         {componente.vidaUtil.some(v => v.unidad === 'HORAS') && (
-          <div className="text-sm">
-            <span className="text-gray-500">Horas Acumuladas:</span>
-            <p className="font-medium text-gray-900">
-              {componente.vidaUtil.find(v => v.unidad === 'HORAS')?.acumulado.toLocaleString() || 0} h
-            </p>
+          <div className="flex items-center space-x-3 bg-purple-50/80 rounded-xl p-3 border border-purple-100/50">
+            <div className="bg-purple-100 rounded-lg p-2">
+              <span className="text-purple-600 text-lg">⏱️</span>
+            </div>
+            <div className="flex-1">
+              <span className="text-purple-600 text-xs font-medium uppercase tracking-wider">Horas Acumuladas</span>
+              <p className="font-bold text-purple-900 text-lg">
+                {componente.vidaUtil.find(v => v.unidad === 'HORAS')?.acumulado.toLocaleString() || 0}<span className="text-sm text-purple-600 ml-1">h</span>
+              </p>
+            </div>
           </div>
         )}
 
         {componente.vidaUtil.some(v => v.unidad === 'CICLOS') && (
-          <div className="text-sm">
-            <span className="text-gray-500">Ciclos Acumulados:</span>
-            <p className="font-medium text-gray-900">
-              {componente.vidaUtil.find(v => v.unidad === 'CICLOS')?.acumulado.toLocaleString() || 0}
-            </p>
+          <div className="flex items-center space-x-3 bg-green-50/80 rounded-xl p-3 border border-green-100/50">
+            <div className="bg-green-100 rounded-lg p-2">
+              <span className="text-green-600 text-lg">🔄</span>
+            </div>
+            <div className="flex-1">
+              <span className="text-green-600 text-xs font-medium uppercase tracking-wider">Ciclos Acumulados</span>
+              <p className="font-bold text-green-900 text-lg">
+                {componente.vidaUtil.find(v => v.unidad === 'CICLOS')?.acumulado.toLocaleString() || 0}<span className="text-sm text-green-600 ml-1">ciclos</span>
+              </p>
+            </div>
           </div>
         )}
 
         {componente.observaciones && (
-          <div className="text-sm">
-            <span className="text-gray-500">Observaciones:</span>
-            <p className="text-gray-700 mt-1">{componente.observaciones}</p>
+          <div className="bg-amber-50/80 rounded-xl p-4 border border-amber-100/50">
+            <div className="flex items-start space-x-3">
+              <div className="bg-amber-100 rounded-lg p-1.5 mt-0.5">
+                <span className="text-amber-600 text-sm">📝</span>
+              </div>
+              <div className="flex-1">
+                <span className="text-amber-700 text-xs font-medium uppercase tracking-wider">Observaciones</span>
+                <p className="text-amber-800 mt-1 text-sm leading-relaxed">{componente.observaciones}</p>
+              </div>
+            </div>
           </div>
         )}
       </div>
 
       {/* Acciones */}
-      <div className="p-4 border-t border-gray-100">
-        <div className="flex space-x-2">
+      <div className="bg-gradient-to-r from-gray-50 to-slate-50 p-5 border-t border-gray-100/50">
+        <div className="flex flex-wrap gap-3">
+          {onMonitoreo && (
+            <button
+              onClick={() => onMonitoreo(componente)}
+              className="flex-1 min-w-[90px] bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2.5 rounded-xl text-xs font-semibold hover:from-blue-600 hover:to-blue-700 transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
+            >
+              <span className="text-sm">📊</span>
+              <span>Monitoreo</span>
+            </button>
+          )}
           <button
             onClick={() => onHistorial(componente)}
-            className="flex-1 bg-blue-100 text-blue-700 px-3 py-1 rounded text-xs font-medium hover:bg-blue-200 transition-colors flex items-center justify-center space-x-1"
+            className="flex-1 min-w-[80px] bg-white text-indigo-600 px-4 py-2.5 rounded-xl text-xs font-semibold hover:bg-indigo-50 transition-all duration-200 border border-indigo-200 hover:border-indigo-300 flex items-center justify-center space-x-2"
           >
-            <span>📅</span>
-            <span>Historial</span>
-          </button>
-          <button
-            onClick={() => onHistorial(componente)}
-            className="flex-1 bg-indigo-100 text-indigo-700 px-3 py-1 rounded text-xs font-medium hover:bg-indigo-200 transition-colors flex items-center justify-center space-x-1"
-          >
-            <span>👁️</span>
+            <span className="text-sm">👁️</span>
             <span>Ver Más</span>
           </button>
           <button
             onClick={() => onEditar(componente)}
-            className="flex-1 bg-green-100 text-green-700 px-3 py-1 rounded text-xs font-medium hover:bg-green-200 transition-colors"
+            className="flex-1 min-w-[70px] bg-white text-green-600 px-4 py-2.5 rounded-xl text-xs font-semibold hover:bg-green-50 transition-all duration-200 border border-green-200 hover:border-green-300"
           >
-            Editar
+            ✏️ Editar
           </button>
           <button
             onClick={() => onEliminar(componente._id!)}
-            className="bg-red-100 text-red-700 px-3 py-1 rounded text-xs font-medium hover:bg-red-200 transition-colors"
+            className="bg-white text-red-600 px-4 py-2.5 rounded-xl text-xs font-semibold hover:bg-red-50 transition-all duration-200 border border-red-200 hover:border-red-300"
           >
-            Eliminar
+            🗑️ Eliminar
           </button>
         </div>
       </div>
@@ -456,6 +505,7 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
                     onHistorial={abrirHistorial}
                     onEditar={handleEditarComponente}
                     onEliminar={handleEliminarComponente}
+                    onMonitoreo={abrirMonitoreo}
                   />
                 ))}
               </div>
@@ -490,6 +540,7 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
             onUpdate={async (componenteId: string, data: any) => {
               await cargarComponentes();
             }}
+            initialTab={tabInicial}
           />
         )}
       </div>
@@ -638,6 +689,7 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
                   onHistorial={abrirHistorial}
                   onEditar={handleEditarComponente}
                   onEliminar={handleEliminarComponente}
+                  onMonitoreo={abrirMonitoreo}
                 />
               ))}
             </div>
@@ -671,6 +723,7 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
             onUpdate={async (componenteId: string, data: any) => {
               await cargarComponentes();
             }}
+            initialTab={tabInicial}
           />
         )}
       </div>
