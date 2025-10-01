@@ -138,7 +138,7 @@ export const calcularDiasRestantes = (fechaProximaRevision: string, valorActual:
 };
 
 // Función auxiliar para obtener el color del estado
-export const obtenerColorEstado = (estado: 'OK' | 'PROXIMO' | 'VENCIDO'): string => {
+export const obtenerColorEstado = (estado: 'OK' | 'PROXIMO' | 'VENCIDO' | 'OVERHAUL_REQUERIDO'): string => {
   switch (estado) {
     case 'OK':
       return 'text-green-600 bg-green-50 border-green-200';
@@ -146,6 +146,8 @@ export const obtenerColorEstado = (estado: 'OK' | 'PROXIMO' | 'VENCIDO'): string
       return 'text-yellow-600 bg-yellow-50 border-yellow-200';
     case 'VENCIDO':
       return 'text-red-600 bg-red-50 border-red-200';
+    case 'OVERHAUL_REQUERIDO':
+      return 'text-purple-600 bg-purple-50 border-purple-200';
     default:
       return 'text-gray-600 bg-gray-50 border-gray-200';
   }
@@ -214,4 +216,29 @@ export const filtrarEstados = (
 
     return true;
   });
+};
+
+// Completar overhaul de un estado de monitoreo
+export const completarOverhaulEstado = async (
+  estadoId: string,
+  observaciones?: string
+) => {
+  try {
+    const response = await axiosInstance.post(
+      `/api/estados-monitoreo-componente/${estadoId}/completar-overhaul`,
+      { observaciones }
+    );
+    return {
+      success: true,
+      data: response.data.data as IEstadoMonitoreoComponente,
+      message: response.data.message
+    };
+  } catch (error: any) {
+    console.error('Error al completar overhaul:', error);
+    return {
+      success: false,
+      error: error.response?.data?.message || 'Error al completar overhaul',
+      data: null
+    };
+  }
 };

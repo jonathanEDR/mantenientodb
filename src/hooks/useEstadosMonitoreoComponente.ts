@@ -9,6 +9,7 @@ import {
   crearEstadoMonitoreoComponente,
   actualizarEstadoMonitoreoComponente,
   eliminarEstadoMonitoreoComponente,
+  completarOverhaulEstado,
   filtrarEstados
 } from '../utils/estadosMonitoreoComponenteApi';
 
@@ -23,6 +24,7 @@ interface UseEstadosMonitoreoComponenteReturn {
   crearEstado: (componenteId: string, datos: IFormEstadoMonitoreo) => Promise<boolean>;
   actualizarEstado: (estadoId: string, datos: Partial<IFormEstadoMonitoreo>) => Promise<boolean>;
   eliminarEstado: (estadoId: string) => Promise<boolean>;
+  completarOverhaul: (estadoId: string, observaciones?: string) => Promise<boolean>;
   // Funciones de filtro
   aplicarFiltros: (nuevosFiltros: Partial<IFiltrosEstadosMonitoreo>) => void;
   limpiarFiltros: () => void;
@@ -159,6 +161,35 @@ export const useEstadosMonitoreoComponente = (componenteId?: string): UseEstados
     }
   }, []);
 
+  // Completar overhaul
+  const completarOverhaul = useCallback(async (estadoId: string, observaciones?: string): Promise<boolean> => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const resultado = await completarOverhaulEstado(estadoId, observaciones);
+      
+      if (resultado.success) {
+        // Actualizar el estado en la lista
+        setEstados(prev => 
+          prev.map(estado => 
+            estado._id === estadoId ? resultado.data! : estado
+          )
+        );
+        return true;
+      } else {
+        setError(resultado.error);
+        return false;
+      }
+    } catch (err) {
+      console.error('Error al completar overhaul:', err);
+      setError('Error inesperado al completar overhaul');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   // Aplicar filtros
   const aplicarFiltros = useCallback((nuevosFiltros: Partial<IFiltrosEstadosMonitoreo>) => {
     setFiltros(prev => ({ ...prev, ...nuevosFiltros }));
@@ -207,6 +238,7 @@ export const useEstadosMonitoreoComponente = (componenteId?: string): UseEstados
     crearEstado,
     actualizarEstado,
     eliminarEstado,
+    completarOverhaul,
     aplicarFiltros,
     limpiarFiltros,
     obtenerEstadisticas,

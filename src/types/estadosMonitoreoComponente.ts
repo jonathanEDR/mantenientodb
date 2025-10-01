@@ -7,11 +7,16 @@ export interface IEstadoMonitoreoComponente {
   valorActual: number;
   valorLimite: number;
   unidad: 'HORAS' | 'CICLOS' | 'DIAS' | 'MESES' | 'ANOS';
-  estado: 'OK' | 'PROXIMO' | 'VENCIDO';
+  estado: 'OK' | 'PROXIMO' | 'VENCIDO' | 'OVERHAUL_REQUERIDO';
   fechaProximaRevision: string;
   fechaUltimaActualizacion: string;
   alertaActiva: boolean;
   observaciones?: string;
+  // Campos para unificación de sistemas
+  basadoEnAeronave: boolean;
+  offsetInicial: number;
+  // Configuración de Overhauls
+  configuracionOverhaul?: IConfiguracionOverhaul;
   configuracionPersonalizada?: IConfiguracionPersonalizada;
   createdAt?: string;
   updatedAt?: string;
@@ -21,6 +26,18 @@ export interface IConfiguracionPersonalizada {
   alertaAnticipada: number; // Horas antes del vencimiento para alertar
   criticidad: 'BAJA' | 'MEDIA' | 'ALTA' | 'CRITICA';
   requiereParoAeronave: boolean;
+}
+
+export interface IConfiguracionOverhaul {
+  habilitarOverhaul: boolean;
+  intervaloOverhaul: number; // Horas entre overhauls
+  ciclosOverhaul: number; // Número máximo de overhauls permitidos
+  cicloActual: number; // Ciclo actual (0 = primer uso, 1 = primer overhaul, etc.)
+  horasUltimoOverhaul: number; // Horas cuando se hizo el último overhaul
+  proximoOverhaulEn: number; // Horas cuando debe hacerse el próximo overhaul
+  requiereOverhaul: boolean; // Si actualmente requiere overhaul
+  fechaUltimoOverhaul?: string; // Cuando se completó el último overhaul
+  observacionesOverhaul?: string;
 }
 
 export interface IComponenteBasico {
@@ -66,6 +83,9 @@ export interface IFormEstadoMonitoreo {
   unidad: 'HORAS' | 'CICLOS' | 'DIAS' | 'MESES' | 'ANOS';
   fechaProximaRevision: string;
   observaciones?: string;
+  basadoEnAeronave?: boolean;
+  offsetInicial?: number;
+  configuracionOverhaul?: IConfiguracionOverhaul;
   configuracionPersonalizada?: IConfiguracionPersonalizada;
 }
 
@@ -119,5 +139,6 @@ export const CRITICIDADES = [
 export const ESTADOS_MONITOREO = [
   { value: 'OK', label: 'Al día', color: 'text-green-600 bg-green-50' },
   { value: 'PROXIMO', label: 'Próximo', color: 'text-yellow-600 bg-yellow-50' },
-  { value: 'VENCIDO', label: 'Vencido', color: 'text-red-600 bg-red-50' }
+  { value: 'VENCIDO', label: 'Vencido', color: 'text-red-600 bg-red-50' },
+  { value: 'OVERHAUL_REQUERIDO', label: 'Overhaul Requerido', color: 'text-purple-600 bg-purple-50' }
 ] as const;

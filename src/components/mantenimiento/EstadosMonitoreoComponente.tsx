@@ -28,6 +28,7 @@ const EstadosMonitoreoComponente: React.FC<EstadosMonitoreoComponenteProps> = ({
     crearEstado,
     actualizarEstado,
     eliminarEstado,
+    completarOverhaul,
     aplicarFiltros,
     limpiarFiltros,
     obtenerEstadisticas,
@@ -72,6 +73,24 @@ const EstadosMonitoreoComponente: React.FC<EstadosMonitoreoComponenteProps> = ({
   const handleEliminarEstado = async (estadoId: string) => {
     if (window.confirm('¿Estás seguro de que deseas eliminar este estado de monitoreo?')) {
       await eliminarEstado(estadoId);
+    }
+  };
+
+  const handleCompletarOverhaul = async (estado: IEstadoMonitoreoComponente) => {
+    const observaciones = prompt(
+      `¿Deseas agregar observaciones sobre el overhaul completado?\n\n` +
+      `Componente: ${typeof estado.componenteId === 'object' ? estado.componenteId.numeroSerie : ''}\n` +
+      `Control: ${typeof estado.catalogoControlId === 'object' ? estado.catalogoControlId.descripcionCodigo : ''}`
+    );
+
+    if (observaciones !== null) { // null significa que canceló
+      const exito = await completarOverhaul(estado._id, observaciones || undefined);
+      if (exito) {
+        // Mostrar mensaje de éxito
+        const configOverhaul = estado.configuracionOverhaul;
+        const cicloNuevo = (configOverhaul?.cicloActual || 0) + 1;
+        alert(`¡Overhaul completado exitosamente!\n\nCiclo ${cicloNuevo} de ${configOverhaul?.ciclosOverhaul || 5}`);
+      }
     }
   };
 
@@ -200,7 +219,8 @@ const EstadosMonitoreoComponente: React.FC<EstadosMonitoreoComponenteProps> = ({
                       <div 
                         className={`h-2 rounded-full transition-all ${
                           estado.estado === 'VENCIDO' ? 'bg-red-500' :
-                          estado.estado === 'PROXIMO' ? 'bg-yellow-500' : 'bg-green-500'
+                          estado.estado === 'PROXIMO' ? 'bg-yellow-500' : 
+                          estado.estado === 'OVERHAUL_REQUERIDO' ? 'bg-purple-500' : 'bg-green-500'
                         }`}
                         style={{ width: `${porcentajeProgreso}%` }}
                       />
@@ -212,7 +232,9 @@ const EstadosMonitoreoComponente: React.FC<EstadosMonitoreoComponenteProps> = ({
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${obtenerColorEstado(estado.estado)}`}>
                       {estado.estado === 'OK' ? 'Al día' : 
-                       estado.estado === 'PROXIMO' ? 'Próximo' : 'Vencido'}
+                       estado.estado === 'PROXIMO' ? 'Próximo' : 
+                       estado.estado === 'VENCIDO' ? 'Vencido' : 
+                       estado.estado === 'OVERHAUL_REQUERIDO' ? 'Overhaul Requerido' : estado.estado}
                     </span>
                     {estado.alertaActiva && (
                       <div className="text-xs text-red-600 mt-1">
@@ -230,31 +252,58 @@ const EstadosMonitoreoComponente: React.FC<EstadosMonitoreoComponenteProps> = ({
                       {estado.configuracionPersonalizada?.criticidad || 'MEDIA'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                    {/* Botón Editar - Solo ADMINISTRADOR y MECANICO */}
-                    {(permissions.isAdmin || permissions.isMechanic) && (
-                      <button
-                        onClick={() => handleEditarEstado(estado)}
-                        className="text-blue-600 hover:text-blue-900 transition-colors"
-                      >
-                        Editar
-                      </button>
-                    )}
-                    
-                    {/* Botón Eliminar - Solo ADMINISTRADOR */}
-                    {permissions.isAdmin && (
-                      <button
-                        onClick={() => handleEliminarEstado(estado._id)}
-                        className="text-red-600 hover:text-red-900 transition-colors"
-                      >
-                        Eliminar
-                      </button>
-                    )}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex flex-col space-y-2">
+                      {/* Botones principales */}
+                      <div className="flex space-x-2">
+                        {/* Botón Editar - Solo ADMINISTRADOR y MECANICO */}
+                        {(permissions.isAdmin || permissions.isMechanic) && (
+                          <button
+                            onClick={() => handleEditarEstado(estado)}
+                            className="text-blue-600 hover:text-blue-900 transition-colors"
+                          >
+                            Editar
+                          </button>
+                        )}
+                        
+                        {/* Botón Eliminar - Solo ADMINISTRADOR */}
+                        {permissions.isAdmin && (
+                          <button
+                            onClick={() => handleEliminarEstado(estado._id)}
+                            className="text-red-600 hover:text-red-900 transition-colors"
+                          >
+                            Eliminar
+                          </button>
+                        )}
+                      </div>
 
-                    {/* Mensaje para roles sin permisos */}
-                    {!permissions.isAdmin && !permissions.isMechanic && (
-                      <span className="text-gray-500 text-xs italic">Solo visualización</span>
-                    )}
+                      {/* Botón Completar Overhaul - Solo si requiere overhaul */}
+                      {estado.configuracionOverhaul?.requiereOverhaul && 
+                       estado.estado === 'OVERHAUL_REQUERIDO' && 
+                       (permissions.isAdmin || permissions.isMechanic) && (
+                        <button
+                          onClick={() => handleCompletarOverhaul(estado)}
+                          className="bg-purple-600 text-white px-3 py-1 rounded text-xs hover:bg-purple-700 transition-colors flex items-center"
+                        >
+                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Completar Overhaul
+                        </button>
+                      )}
+
+                      {/* Información de overhaul si está habilitado */}
+                      {estado.configuracionOverhaul?.habilitarOverhaul && (
+                        <div className="text-xs text-gray-500">
+                          Ciclo {estado.configuracionOverhaul.cicloActual} de {estado.configuracionOverhaul.ciclosOverhaul}
+                        </div>
+                      )}
+
+                      {/* Mensaje para roles sin permisos */}
+                      {!permissions.isAdmin && !permissions.isMechanic && (
+                        <span className="text-gray-500 text-xs italic">Solo visualización</span>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );
@@ -325,6 +374,7 @@ const EstadosMonitoreoComponente: React.FC<EstadosMonitoreoComponenteProps> = ({
         }}
         onGuardar={handleGuardarEstado}
         loading={loading}
+        componenteId={componenteId}
       />
     </div>
   );

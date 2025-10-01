@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { 
   IEstadoMonitoreoComponente, 
   IFormEstadoMonitoreo, 
+  IConfiguracionOverhaul,
   UNIDADES_MONITOREO, 
   CRITICIDADES,
   ICatalogoControlMonitoreo
 } from '../../types/estadosMonitoreoComponente';
 import { obtenerCatalogoControlMonitoreo } from '../../utils/herramientasApi';
+import { obtenerComponente } from '../../utils/mantenimientoApi';
 
 interface ModalEstadoMonitoreoProps {
   abierto: boolean;
@@ -14,6 +16,7 @@ interface ModalEstadoMonitoreoProps {
   onCerrar: () => void;
   onGuardar: (datos: IFormEstadoMonitoreo) => Promise<boolean>;
   loading: boolean;
+  componenteId?: string; // Para poder obtener información de la aeronave
 }
 
 const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
@@ -21,7 +24,8 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
   estado,
   onCerrar,
   onGuardar,
-  loading
+  loading,
+  componenteId
 }) => {
   const [formData, setFormData] = useState<IFormEstadoMonitoreo>({
     catalogoControlId: '',
@@ -30,6 +34,18 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
     unidad: 'HORAS',
     fechaProximaRevision: '',
     observaciones: '',
+    basadoEnAeronave: true, // Por defecto usar horas de aeronave
+    offsetInicial: 0,
+    configuracionOverhaul: {
+      habilitarOverhaul: false,
+      intervaloOverhaul: 500,
+      ciclosOverhaul: 5,
+      cicloActual: 0,
+      horasUltimoOverhaul: 0,
+      proximoOverhaulEn: 500,
+      requiereOverhaul: false,
+      observacionesOverhaul: ''
+    },
     configuracionPersonalizada: {
       alertaAnticipada: 50,
       criticidad: 'MEDIA',
@@ -40,27 +56,46 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
   const [catalogos, setCatalogos] = useState<ICatalogoControlMonitoreo[]>([]);
   const [loadingCatalogos, setLoadingCatalogos] = useState(false);
   const [errores, setErrores] = useState<Record<string, string>>({});
+  const [componenteInfo, setComponenteInfo] = useState<any>(null);
+  const [horasAeronave, setHorasAeronave] = useState<number>(0);
 
-  // Cargar catálogos de control
+  // Cargar catálogos de control y información del componente
   useEffect(() => {
-    const cargarCatalogos = async () => {
+    const cargarDatos = async () => {
+      if (!abierto) return;
+      
       setLoadingCatalogos(true);
       try {
-        const resultado = await obtenerCatalogoControlMonitoreo();
-        if (resultado.success) {
-          setCatalogos(resultado.data);
+        // Cargar catálogos de control
+        const resultadoCatalogos = await obtenerCatalogoControlMonitoreo();
+        if (resultadoCatalogos.success) {
+          setCatalogos(resultadoCatalogos.data);
+        }
+
+        // Cargar información del componente si está disponible
+        if (componenteId) {
+          const resultadoComponente = await obtenerComponente(componenteId);
+          if (resultadoComponente.success) {
+            setComponenteInfo(resultadoComponente.data);
+            // Si el componente tiene aeronave asignada, obtener sus horas
+            if (resultadoComponente.data.aeronaveActual) {
+              const aeronave = resultadoComponente.data.aeronaveActual;
+              // Verificar si es un objeto aeronave completo o solo un ID
+              if (typeof aeronave === 'object' && 'horasVuelo' in aeronave) {
+                setHorasAeronave(aeronave.horasVuelo || 0);
+              }
+            }
+          }
         }
       } catch (error) {
-        console.error('Error al cargar catálogos:', error);
+        console.error('Error al cargar datos:', error);
       } finally {
         setLoadingCatalogos(false);
       }
     };
 
-    if (abierto) {
-      cargarCatalogos();
-    }
-  }, [abierto]);
+    cargarDatos();
+  }, [abierto, componenteId]);
 
   // Inicializar formulario cuando cambia el estado a editar
   useEffect(() => {
@@ -77,6 +112,19 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
         unidad: estado.unidad,
         fechaProximaRevision: estado.fechaProximaRevision.split('T')[0], // Solo la fecha
         observaciones: estado.observaciones || '',
+        basadoEnAeronave: estado.basadoEnAeronave ?? true,
+        offsetInicial: estado.offsetInicial || 0,
+        configuracionOverhaul: {
+          habilitarOverhaul: estado.configuracionOverhaul?.habilitarOverhaul || false,
+          intervaloOverhaul: estado.configuracionOverhaul?.intervaloOverhaul || 500,
+          ciclosOverhaul: estado.configuracionOverhaul?.ciclosOverhaul || 5,
+          cicloActual: estado.configuracionOverhaul?.cicloActual || 0,
+          horasUltimoOverhaul: estado.configuracionOverhaul?.horasUltimoOverhaul || 0,
+          proximoOverhaulEn: estado.configuracionOverhaul?.proximoOverhaulEn || 500,
+          requiereOverhaul: estado.configuracionOverhaul?.requiereOverhaul || false,
+          fechaUltimoOverhaul: estado.configuracionOverhaul?.fechaUltimoOverhaul,
+          observacionesOverhaul: estado.configuracionOverhaul?.observacionesOverhaul || ''
+        },
         configuracionPersonalizada: {
           alertaAnticipada: estado.configuracionPersonalizada?.alertaAnticipada || 50,
           criticidad: estado.configuracionPersonalizada?.criticidad || 'MEDIA',
@@ -92,6 +140,18 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
         unidad: 'HORAS',
         fechaProximaRevision: '',
         observaciones: '',
+        basadoEnAeronave: true,
+        offsetInicial: 0,
+        configuracionOverhaul: {
+          habilitarOverhaul: false,
+          intervaloOverhaul: 500,
+          ciclosOverhaul: 5,
+          cicloActual: 0,
+          horasUltimoOverhaul: 0,
+          proximoOverhaulEn: 500,
+          requiereOverhaul: false,
+          observacionesOverhaul: ''
+        },
         configuracionPersonalizada: {
           alertaAnticipada: 50,
           criticidad: 'MEDIA',
@@ -149,12 +209,19 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
     if (campo === 'catalogoControlId' && valor) {
       const catalogoSeleccionado = catalogos.find(cat => cat._id === valor);
       if (catalogoSeleccionado) {
+        // Calcular valores basándose en el catálogo y horas de aeronave
+        const rangoIntervalo = catalogoSeleccionado.horaFinal - catalogoSeleccionado.horaInicial;
+        const offsetInicial = horasAeronave; // Usar las horas actuales como offset inicial
+        const valorActual = Math.max(0, horasAeronave - catalogoSeleccionado.horaInicial);
+        
         setFormData(prev => ({
           ...prev,
           [campo]: valor,
-          valorActual: catalogoSeleccionado.horaInicial,
-          valorLimite: catalogoSeleccionado.horaFinal,
-          unidad: 'HORAS' // Siempre HORAS por defecto
+          valorActual: valorActual,
+          valorLimite: rangoIntervalo,
+          offsetInicial: offsetInicial,
+          basadoEnAeronave: true,
+          unidad: 'HORAS'
         }));
       }
     }
@@ -166,6 +233,16 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
         [campo]: ''
       }));
     }
+  };
+
+  const handleOverhaulChange = (campo: keyof IConfiguracionOverhaul, valor: any) => {
+    setFormData(prev => ({
+      ...prev,
+      configuracionOverhaul: {
+        ...prev.configuracionOverhaul!,
+        [campo]: valor
+      }
+    }));
   };
 
   const handleConfiguracionChange = (campo: string, valor: any) => {
@@ -333,6 +410,97 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
                 </span>
               </label>
             </div>
+          </div>
+
+          {/* Configuración de Overhauls */}
+          <div className="border-t pt-4">
+            <h3 className="text-sm font-medium text-gray-900 mb-4">Configuración de Overhauls</h3>
+            
+            {/* Habilitar Overhaul */}
+            <div className="mb-4">
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={formData.configuracionOverhaul?.habilitarOverhaul || false}
+                  onChange={(e) => handleOverhaulChange('habilitarOverhaul', e.target.checked)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <span className="ml-2 text-sm text-gray-700">
+                  Programar overhauls automáticamente
+                </span>
+              </label>
+            </div>
+
+            {formData.configuracionOverhaul?.habilitarOverhaul && (
+              <div className="space-y-4 ml-6 pl-4 border-l border-gray-200">
+                {/* Intervalo y Ciclos */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Horas entre Overhauls *
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={formData.configuracionOverhaul?.intervaloOverhaul || 500}
+                      onChange={(e) => handleOverhaulChange('intervaloOverhaul', parseInt(e.target.value))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="500"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Cada cuántas horas debe hacerse overhaul</p>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Número de Ciclos Máximos *
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="20"
+                      value={formData.configuracionOverhaul?.ciclosOverhaul || 5}
+                      onChange={(e) => handleOverhaulChange('ciclosOverhaul', parseInt(e.target.value))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="5"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Máximo overhauls permitidos antes de reemplazo</p>
+                  </div>
+                </div>
+
+                {/* Información del ciclo actual */}
+                {formData.configuracionOverhaul?.cicloActual > 0 && (
+                  <div className="bg-blue-50 p-3 rounded-lg">
+                    <div className="flex items-center text-sm text-blue-800">
+                      <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      </svg>
+                      <span className="font-medium">
+                        Ciclo actual: {formData.configuracionOverhaul.cicloActual} de {formData.configuracionOverhaul.ciclosOverhaul}
+                      </span>
+                    </div>
+                    {formData.configuracionOverhaul?.fechaUltimoOverhaul && (
+                      <p className="text-sm text-blue-600 mt-1">
+                        Último overhaul: {new Date(formData.configuracionOverhaul.fechaUltimoOverhaul).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Observaciones de overhaul */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Observaciones de Overhaul
+                  </label>
+                  <textarea
+                    value={formData.configuracionOverhaul?.observacionesOverhaul || ''}
+                    onChange={(e) => handleOverhaulChange('observacionesOverhaul', e.target.value)}
+                    rows={2}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Observaciones específicas sobre los overhauls de este componente..."
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Observaciones */}
