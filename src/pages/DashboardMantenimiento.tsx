@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { IResumenDashboard, IAlerta } from '../types/mantenimiento';
 import { obtenerResumenDashboard, obtenerAlertas } from '../utils/mantenimientoApi';
-// Hook de monitoreo viejo removido - ahora usamos MonitoreoGranularDashboard
-import MonitoreoGranularDashboard from '../components/monitoreo/MonitoreoGranularDashboard';
+import MonitoreoAeronaveComponentes from '../components/dashboard/MonitoreoAeronaveComponentes';
 import ProtectedButton, { ProtectedClickable, useProtectedAction } from '../components/common/ProtectedButton';
 
 const DashboardMantenimiento: React.FC = () => {
@@ -325,21 +324,24 @@ const DashboardMantenimiento: React.FC = () => {
               </div>
             </div>
 
-            {/* La sección de Monitoreo de Flota ahora se maneja completamente en MonitoreoGranularDashboard */}
-
-            {/* Monitoreo Granular de Componentes */}
-            <MonitoreoGranularDashboard
-              onClickComponente={(componenteId: string) => {
+            {/* Monitoreo Detallado de Componentes por Aeronave */}
+            <MonitoreoAeronaveComponentes
+              onClickComponente={(componenteId: string, aeronaveId: string) => {
                 executeProtected(() => {
-                  console.log('📊 [DASHBOARD] Navegando a componente:', componenteId);
-                  navigate(`/mantenimiento/componentes?componenteId=${componenteId}`);
+                  console.log('📊 [DASHBOARD] Navegando a componente:', componenteId, 'de aeronave:', aeronaveId);
+                  navigate(`/mantenimiento/componentes?componenteId=${componenteId}&aeronaveId=${aeronaveId}`);
                 });
               }}
-              onClickAeronave={(aeronaveId: string) => {
+              onClickEstado={(estadoId: string, componenteId: string) => {
                 executeProtected(() => {
-                  console.log('📊 [DASHBOARD] Navegando a aeronave:', aeronaveId);
-                  navigate(`/mantenimiento/aeronaves/${aeronaveId}/componentes`);
+                  console.log('📊 [DASHBOARD] Navegando a estado:', estadoId, 'del componente:', componenteId);
+                  navigate(`/mantenimiento/componentes/${componenteId}/estados/${estadoId}`);
                 });
+              }}
+              onCompletarOverhaul={(componenteId: string, estadoIds: string[]) => {
+                console.log('✅ [DASHBOARD] Overhaul completado para componente:', componenteId, 'estados:', estadoIds);
+                // Recargar datos del dashboard después del overhaul
+                cargarDatosDashboard();
               }}
             />
 

@@ -26,12 +26,12 @@ export const obtenerEstadosMonitoreoComponente = async (componenteId: string) =>
 
 // Crear nuevo estado de monitoreo para un componente
 export const crearEstadoMonitoreoComponente = async (
-  componenteId: string, 
+  componenteId: string,
   datos: IFormEstadoMonitoreo
 ) => {
   try {
     const response = await axiosInstance.post(
-      `/api/estados-monitoreo-componente/componente/${componenteId}`, 
+      `/estados-monitoreo-componente/componente/${componenteId}`,
       datos
     );
     return {
@@ -51,12 +51,12 @@ export const crearEstadoMonitoreoComponente = async (
 
 // Actualizar estado de monitoreo
 export const actualizarEstadoMonitoreoComponente = async (
-  estadoId: string, 
+  estadoId: string,
   datos: Partial<IFormEstadoMonitoreo>
 ) => {
   try {
     const response = await axiosInstance.put(
-      `/api/estados-monitoreo-componente/${estadoId}`, 
+      `/estados-monitoreo-componente/${estadoId}`,
       datos
     );
     return {
@@ -95,7 +95,7 @@ export const eliminarEstadoMonitoreoComponente = async (estadoId: string) => {
 export const obtenerResumenEstadosAeronave = async (aeronaveId: string) => {
   try {
     const response = await axiosInstance.get(
-      `/api/estados-monitoreo-componente/aeronave/${aeronaveId}/resumen`
+      `/estados-monitoreo-componente/aeronave/${aeronaveId}/resumen`
     );
     return {
       success: true,
@@ -225,7 +225,7 @@ export const completarOverhaulEstado = async (
 ) => {
   try {
     const response = await axiosInstance.post(
-      `/api/estados-monitoreo-componente/${estadoId}/completar-overhaul`,
+      `/estados-monitoreo-componente/${estadoId}/completar-overhaul`,
       { observaciones }
     );
     return {

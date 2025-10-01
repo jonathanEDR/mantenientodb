@@ -32,7 +32,6 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
     valorActual: 0,
     valorLimite: 100,
     unidad: 'HORAS',
-    fechaProximaRevision: '',
     observaciones: '',
     basadoEnAeronave: true, // Por defecto usar horas de aeronave
     offsetInicial: 0,
@@ -110,7 +109,7 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
         valorActual: estado.valorActual,
         valorLimite: estado.valorLimite,
         unidad: estado.unidad,
-        fechaProximaRevision: estado.fechaProximaRevision.split('T')[0], // Solo la fecha
+
         observaciones: estado.observaciones || '',
         basadoEnAeronave: estado.basadoEnAeronave ?? true,
         offsetInicial: estado.offsetInicial || 0,
@@ -138,7 +137,7 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
         valorActual: 0,
         valorLimite: 100,
         unidad: 'HORAS',
-        fechaProximaRevision: '',
+
         observaciones: '',
         basadoEnAeronave: true,
         offsetInicial: 0,
@@ -169,9 +168,7 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
       nuevosErrores.catalogoControlId = 'Selecciona un control de monitoreo';
     }
 
-    if (!formData.fechaProximaRevision) {
-      nuevosErrores.fechaProximaRevision = 'Selecciona una fecha de próxima revisión';
-    }
+
 
     if (formData.configuracionPersonalizada?.alertaAnticipada! < 0) {
       nuevosErrores.alertaAnticipada = 'La alerta anticipada no puede ser negativa';
@@ -343,23 +340,7 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
             </div>
           </div>
 
-          {/* Fecha de Próxima Revisión */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Fecha de Próxima Revisión *
-            </label>
-            <input
-              type="date"
-              value={formData.fechaProximaRevision}
-              onChange={(e) => handleInputChange('fechaProximaRevision', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 ${
-                errores.fechaProximaRevision ? 'border-red-300' : 'border-gray-300'
-              }`}
-            />
-            {errores.fechaProximaRevision && (
-              <p className="text-red-500 text-sm mt-1">{errores.fechaProximaRevision}</p>
-            )}
-          </div>
+
 
           {/* Configuración Personalizada */}
           <div className="border-t pt-6">

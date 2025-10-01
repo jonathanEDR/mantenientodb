@@ -22,43 +22,95 @@ export default function ComponenteModal({
   aeronaves,
   loading = false
 }: ComponenteModalProps) {
+  
   // Hook para obtener catálogo de componentes
   const { categoriaOptions, loading: catalogoLoading, error: catalogoError } = useCatalogoComponentes();
-  
-  // Categorías estáticas como fallback
-  const categoriasEstaticas = [
-    { value: 'FUSELAJE', label: 'Fuselaje' },
-    { value: 'MOTOR_PRINCIPAL', label: 'Motor Principal' },
-    { value: 'TRANSMISION_PRINCIPAL', label: 'Transmisión Principal' },
-    { value: 'CUBO_ROTOR_PRINCIPAL', label: 'Cubo Rotor Principal' },
-    { value: 'PALAS_ROTOR_PRINCIPAL', label: 'Palas Rotor Principal' },
-    { value: 'PLATO_CICLICO', label: 'Plato Cíclico' },
-    { value: 'OTROS', label: 'Otros' }
-  ];
 
-  // Usar categorías del catálogo si están disponibles, sino usar estáticas
-  const categoriasDisponibles = React.useMemo(() => {
-    if (!catalogoLoading && !catalogoError && categoriaOptions.length > 0) {
-      return categoriaOptions;
-    }
-    return categoriasEstaticas;
-  }, [categoriaOptions, catalogoLoading, catalogoError]);
+  // Mapeo del catálogo al enum del backend
+  const mapearCatalogoAEnum = (codigoCatalogo: string): string => {
+    const mapeo: Record<string, string> = {
+      'FUSELAJE': 'FUSELAJE',
+      'MOTOR': 'MOTOR_PRINCIPAL',
+      'TRANSMISION': 'TRANSMISION_PRINCIPAL',
+      'CUBO_ROTOR': 'CUBO_ROTOR_PRINCIPAL', 
+      'PALAS_ROTOR': 'PALAS_ROTOR_PRINCIPAL',
+      'PLATO_CICLICO': 'PLATO_CICLICO',
+      'CAJA_30_GRADOS': 'CAJA_30_GRADOS',
+      'CUBO_COLA': 'CUBO_ROTOR_COLA',
+      'PALAS_COLA': 'PALAS_ROTOR_COLA',
+      'STARTER': 'STARTER_GENERADOR',
+      'BATERIAS': 'BATERIAS',
+      'HIDRAULICO': 'SISTEMA_HIDRAULICO',
+      'TREN': 'TREN_ATERRIZAJE',
+      'ELECTRICO': 'SISTEMA_ELECTRICO',
+      'INSTRUMENTOS': 'INSTRUMENTACION',
+      'CONTROLES': 'CONTROLES_VUELO'
+    };
+
+    return mapeo[codigoCatalogo.toUpperCase()] || 'OTROS';
+  };
+
+  // Mapeo inverso: buscar código de catálogo por nombre de componente
+  const buscarCodigoPorNombre = (nombreComponente: string): string => {
+    if (!categoriaOptions.length) return ''; // Catálogo aún no cargado
+    
+    // Buscar coincidencia exacta por nombre/descripción
+    const coincidenciaExacta = categoriaOptions.find(cat => 
+      cat.label.toLowerCase() === nombreComponente.toLowerCase()
+    );
+    
+    if (coincidenciaExacta) return coincidenciaExacta.value;
+    
+    // Buscar coincidencia parcial (en caso de variaciones)
+    const coincidenciaParcial = categoriaOptions.find(cat => 
+      cat.label.toLowerCase().includes(nombreComponente.toLowerCase()) ||
+      nombreComponente.toLowerCase().includes(cat.label.toLowerCase())
+    );
+    
+    return coincidenciaParcial?.value || '';
+  };
 
   const [formData, setFormData] = React.useState({
-    nombre: '',
-    categoria: '', // Inicializar vacío, se establecerá cuando cargue el catálogo
+    catalogoComponente: '', // Código del catálogo seleccionado
     numeroSerie: '',
     numeroParte: '',
     fabricante: '',
-    fechaFabricacion: new Date().toISOString().split('T')[0], // Fecha actual por defecto
+    fechaFabricacion: new Date().toISOString().split('T')[0],
     aeronaveActual: '',
     estado: EstadoComponente.EN_ALMACEN,
     ubicacionFisica: '',
     observaciones: ''
   });
 
+  // Derivar nombre y categoría del catálogo seleccionado
+  const componenteInfo = React.useMemo(() => {
+    if (!formData.catalogoComponente) return { nombre: '', categoria: '' };
+    
+    const catalogoSeleccionado = categoriaOptions.find(cat => cat.value === formData.catalogoComponente);
+    const nombre = catalogoSeleccionado ? catalogoSeleccionado.label : '';
+    const categoria = mapearCatalogoAEnum(formData.catalogoComponente);
+    
+    return { nombre, categoria };
+  }, [formData.catalogoComponente, categoriaOptions]);
+
+  // UseEffect para cargar datos del componente (separado del catálogo)
   React.useEffect(() => {
+    console.log('🔧 [EDIT] UseEffect componente ejecutado:', {
+      tieneComponente: !!componente,
+      nombre: componente?.nombre,
+      categoria: componente?.categoria,
+      numeroSerie: componente?.numeroSerie,
+      isOpen
+    });
+
     if (componente) {
+      console.log('🔧 [EDIT] Cargando datos del componente:', {
+        nombre: componente.nombre,
+        categoria: componente.categoria,
+        numeroSerie: componente.numeroSerie,
+        completo: componente
+      });
+
       // Extraer el ID de aeronave si es un objeto poblado
       let aeronaveActualId = '';
       if (componente.aeronaveActual) {
@@ -70,12 +122,11 @@ export default function ComponenteModal({
       }
 
       setFormData({
-        nombre: componente.nombre || '',
-        categoria: componente.categoria || '', // Mantener el valor original del componente
+        catalogoComponente: '', // Se establecerá en el siguiente useEffect cuando el catálogo esté listo
         numeroSerie: componente.numeroSerie || '',
         numeroParte: componente.numeroParte || '',
         fabricante: componente.fabricante || '',
-        fechaFabricacion: componente.fechaFabricacion ? new Date(componente.fechaFabricacion).toISOString().split('T')[0] : '',
+        fechaFabricacion: componente.fechaFabricacion ? new Date(componente.fechaFabricacion).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         aeronaveActual: aeronaveActualId,
         estado: componente.estado || EstadoComponente.EN_ALMACEN,
         ubicacionFisica: componente.ubicacionFisica || '',
@@ -83,53 +134,86 @@ export default function ComponenteModal({
       });
     } else {
       setFormData({
-        nombre: '',
-        categoria: '', // Se establecerá en el useEffect separado
+        catalogoComponente: '',
         numeroSerie: '',
         numeroParte: '',
         fabricante: '',
-        fechaFabricacion: new Date().toISOString().split('T')[0], // Fecha actual por defecto
+        fechaFabricacion: new Date().toISOString().split('T')[0],
         aeronaveActual: '',
         estado: EstadoComponente.EN_ALMACEN,
         ubicacionFisica: '',
         observaciones: ''
       });
     }
-  }, [componente]); // Solo depende del componente, no de las categorías
+  }, [componente]);
 
-  // Efecto separado para establecer categoría por defecto cuando se abre modal nuevo
+  // UseEffect separado para establecer el código del catálogo cuando esté disponible
   React.useEffect(() => {
-    if (!componente && isOpen && categoriasDisponibles.length > 0) {
-      // Solo actualizar si la categoría está vacía
-      setFormData(prev => {
-        if (!prev.categoria) {
-          return { ...prev, categoria: categoriasDisponibles[0].value };
-        }
-        return prev;
+    console.log('🔧 [EDIT] UseEffect catálogo ejecutado:', {
+      tieneComponente: !!componente,
+      nombreComponente: componente?.nombre,
+      catalogoLength: categoriaOptions.length,
+      catalogoLoading,
+      isOpen
+    });
+
+    if (componente && categoriaOptions.length > 0) {
+      const codigoCatalogo = buscarCodigoPorNombre(componente.nombre);
+      
+      console.log('🔧 [EDIT] Buscando código de catálogo:', {
+        nombreComponente: componente.nombre,
+        codigoEncontrado: codigoCatalogo,
+        catalogoDisponible: categoriaOptions.length > 0,
+        catalogoCompleto: categoriaOptions
       });
+      
+      if (codigoCatalogo) {
+        setFormData(prev => ({
+          ...prev,
+          catalogoComponente: codigoCatalogo
+        }));
+      }
     }
-  }, [isOpen, componente, categoriasDisponibles]);
+  }, [componente, categoriaOptions]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Preparar datos base
+    // Validación básica
+    if (!formData.catalogoComponente) {
+      alert('Debe seleccionar un componente del catálogo');
+      return;
+    }
+    
+    if (!formData.numeroSerie.trim()) {
+      alert('El número de serie es requerido');
+      return;
+    }
+    
+    if (!formData.numeroParte.trim()) {
+      alert('El número de parte es requerido');
+      return;
+    }
+    
+    // Preparar datos para envío
     const submitData = {
-      numeroSerie: formData.numeroSerie,
-      numeroParte: formData.numeroParte,
-      nombre: formData.nombre,
-      categoria: formData.categoria,
-      fabricante: formData.fabricante,
-      fechaFabricacion: formData.fechaFabricacion || new Date().toISOString().split('T')[0],
-      vidaUtil: [{ limite: 1000, unidad: 'HORAS' as const, acumulado: 0 }],
-      ubicacionFisica: formData.ubicacionFisica || 'Almacén',
-      observaciones: formData.observaciones || '',
-      // Incluir aeronaveActual siempre (tanto para crear como para editar)
+      nombre: componenteInfo.nombre, // Usar el nombre derivado del catálogo
+      categoria: componenteInfo.categoria, // Usar la categoría mapeada al enum
+      numeroSerie: formData.numeroSerie.trim(),
+      numeroParte: formData.numeroParte.trim(),
+      fabricante: formData.fabricante.trim(),
+      fechaFabricacion: formData.fechaFabricacion,
+      vidaUtil: [{ 
+        limite: 1000, 
+        unidad: 'HORAS' as const, 
+        acumulado: 0 
+      }],
+      ubicacionFisica: formData.ubicacionFisica.trim() || 'Almacén',
+      observaciones: formData.observaciones.trim(),
+      // Incluir aeronave si está seleccionada
       ...(formData.aeronaveActual && { aeronaveActual: formData.aeronaveActual }),
-      // Campos adicionales para actualización
-      ...(componente && {
-        estado: formData.estado
-      })
+      // Para actualizaciones, incluir estado
+      ...(componente && { estado: formData.estado })
     };
 
     onSubmit(submitData);
@@ -162,51 +246,84 @@ export default function ComponenteModal({
       size="xl"
     >
       {catalogoError && (
-        <div className="mb-4 p-3 bg-yellow-100 border border-yellow-300 rounded-md">
-          <div className="text-yellow-700 text-sm">
-            <strong>Advertencia:</strong> No se pudo cargar el catálogo de componentes. 
-            Se mostrarán categorías por defecto.
+        <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded-md">
+          <div className="text-red-700 text-sm">
+            <strong>Error:</strong> No se pudo cargar el catálogo de componentes. {catalogoError}
           </div>
         </div>
       )}
-      
+
+      {componente && categoriaOptions.length > 0 && !formData.catalogoComponente && (
+        <div className="mb-4 p-3 bg-yellow-100 border border-yellow-300 rounded-md">
+          <div className="text-yellow-700 text-sm">
+            <strong>Advertencia:</strong> No se pudo encontrar "{componente.nombre}" en el catálogo actual. 
+            Seleccione el componente correspondiente o el más similar.
+          </div>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
-            label="Nombre"
-            type="text"
-            value={formData.nombre}
-            onChange={(value) => setFormData({...formData, nombre: value})}
-            required
-            placeholder="Nombre del componente"
-          />
+          <div className="space-y-1">
+            <FormField
+              label="Componente del Catálogo"
+              type="select"
+              value={formData.catalogoComponente}
+              onChange={(value) => setFormData({...formData, catalogoComponente: value})}
+              required
+              options={[
+                { value: '', label: 'Seleccionar componente...' },
+                ...categoriaOptions
+              ]}
+              disabled={catalogoLoading}
+            />
+            <p className="text-xs text-gray-500">
+              {catalogoLoading ? 'Cargando catálogo...' : 'Seleccione del catálogo de componentes'}
+            </p>
+          </div>
 
-          <FormField
-            label="Categoría"
-            type="select"
-            value={formData.categoria}
-            onChange={(value) => setFormData({...formData, categoria: value})}
-            required
-            options={categoriasDisponibles}
-          />
+          <div className="space-y-1">
+            <FormField
+              label="Nombre (Auto-generado)"
+              type="text"
+              value={componenteInfo.nombre}
+              onChange={() => {}} // Solo lectura
+              disabled
+              placeholder="Se genera automáticamente del catálogo"
+            />
+            <p className="text-xs text-gray-500">
+              Nombre: <span className="font-medium">{componenteInfo.nombre || 'Ninguno seleccionado'}</span>
+              {componenteInfo.categoria && (
+                <span className="ml-2 text-blue-600">
+                  → Categoría: {componenteInfo.categoria}
+                </span>
+              )}
+            </p>
+          </div>
 
-          <FormField
-            label="Número de Serie"
-            type="text"
-            value={formData.numeroSerie}
-            onChange={(value) => setFormData({...formData, numeroSerie: value})}
-            required
-            placeholder="Número de serie único"
-          />
+          <div className="space-y-1">
+            <FormField
+              label="Número de Serie"
+              type="text"
+              value={formData.numeroSerie}
+              onChange={(value) => setFormData({...formData, numeroSerie: value})}
+              required
+              placeholder="Ej: SN123456, MSN789, etc."
+            />
+            <p className="text-xs text-gray-500">Número de serie único del componente</p>
+          </div>
 
-          <FormField
-            label="Número de Parte"
-            type="text"
-            value={formData.numeroParte}
-            onChange={(value) => setFormData({...formData, numeroParte: value})}
-            required
-            placeholder="Número de parte del fabricante"
-          />
+          <div className="space-y-1">
+            <FormField
+              label="Número de Parte (P/N)"
+              type="text"
+              value={formData.numeroParte}
+              onChange={(value) => setFormData({...formData, numeroParte: value})}
+              required
+              placeholder="Ej: PN12345-01, 123-456-789, etc."
+            />
+            <p className="text-xs text-gray-500">Part Number del fabricante</p>
+          </div>
 
           <FormField
             label="Fabricante"
@@ -214,7 +331,7 @@ export default function ComponenteModal({
             value={formData.fabricante}
             onChange={(value) => setFormData({...formData, fabricante: value})}
             required
-            placeholder="Nombre del fabricante"
+            placeholder="Ej: Bell, Airbus, Safran, etc."
           />
 
           <FormField
@@ -243,23 +360,29 @@ export default function ComponenteModal({
             options={estadoOptions}
           />
 
-          <FormField
-            label="Ubicación Física"
-            type="text"
-            value={formData.ubicacionFisica}
-            onChange={(value) => setFormData({...formData, ubicacionFisica: value})}
-            required
-            placeholder="Ej: Hangar A, Almacén B, Instalado en aeronave"
-          />
+          <div className="space-y-1">
+            <FormField
+              label="Ubicación Física"
+              type="text"
+              value={formData.ubicacionFisica}
+              onChange={(value) => setFormData({...formData, ubicacionFisica: value})}
+              required
+              placeholder="Ej: Hangar A-1, Almacén Principal, Instalado"
+            />
+            <p className="text-xs text-gray-500">Ubicación actual del componente</p>
+          </div>
         </div>
 
-        <FormField
-          label="Observaciones"
-          type="textarea"
-          value={formData.observaciones}
-          onChange={(value) => setFormData({...formData, observaciones: value})}
-          placeholder="Observaciones adicionales..."
-        />
+        <div className="space-y-1">
+          <FormField
+            label="Observaciones"
+            type="textarea"
+            value={formData.observaciones}
+            onChange={(value) => setFormData({...formData, observaciones: value})}
+            placeholder="Observaciones, condiciones especiales, historial relevante..."
+          />
+          <p className="text-xs text-gray-500">Información adicional sobre el componente (opcional)</p>
+        </div>
 
         <FormActions
           onCancel={onClose}

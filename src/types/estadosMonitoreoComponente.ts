@@ -81,7 +81,6 @@ export interface IFormEstadoMonitoreo {
   valorActual: number;
   valorLimite: number;
   unidad: 'HORAS' | 'CICLOS' | 'DIAS' | 'MESES' | 'ANOS';
-  fechaProximaRevision: string;
   observaciones?: string;
   basadoEnAeronave?: boolean;
   offsetInicial?: number;
