@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react';
+import TokenProvider from './components/auth/TokenProvider';
 import Home from './pages/Home';
 import SignInPage from './components/auth/SignInPage';
 import SignUpPage from './components/auth/SignUpPage';
@@ -19,7 +20,8 @@ import MonitoreoFlota from './pages/MonitoreoFlota';
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <TokenProvider>
+      <BrowserRouter>
       <Routes>
         {/* Página pública */}
         <Route path="/" element={<Home />} />
@@ -211,5 +213,6 @@ export default function App() {
         />
       </Routes>
     </BrowserRouter>
+    </TokenProvider>
   );
 }

@@ -5,6 +5,7 @@ import ResumenMonitoreoComponente from './componentes/ResumenMonitoreoComponente
 import { IAeronave } from '../../types/inventario';
 import { IComponente, EstadoComponente, ComponenteCategoria } from '../../types/mantenimiento';
 import axiosInstance from '../../utils/axiosConfig';
+import { usePermissions } from '../../hooks/useRoles';
 
 interface ComponentesAeronaveProps {
   aeronave: IAeronave;
@@ -19,6 +20,7 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
   onClose,
   isInPlace = false
 }) => {
+  const permissions = usePermissions();
   const [componentes, setComponentes] = useState<IComponente[]>([]);
   const [filteredComponentes, setFilteredComponentes] = useState<IComponente[]>([]);
   const [loading, setLoading] = useState(false);
@@ -52,7 +54,7 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
   const cargarComponentes = async () => {
     setLoading(true);
     try {
-      const response = await axiosInstance.get(`/api/mantenimiento/componentes/aeronave/id/${aeronave._id}`);
+      const response = await axiosInstance.get(`/mantenimiento/componentes/aeronave/id/${aeronave._id}`);
       const componentesData = response.data.data || [];
       
       // Log estratégico para gestión de horas
@@ -155,10 +157,10 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
 
       if (componenteEditando) {
         // Actualizar componente existente
-        await axiosInstance.put(`/api/mantenimiento/componentes/${componenteEditando._id}`, dataToSend);
+        await axiosInstance.put(`/mantenimiento/componentes/${componenteEditando._id}`, dataToSend);
       } else {
         // Crear nuevo componente
-        await axiosInstance.post('/api/mantenimiento/componentes', dataToSend);
+        await axiosInstance.post('/mantenimiento/componentes', dataToSend);
       }
       
       await cargarComponentes();
@@ -205,7 +207,7 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
     }
 
     try {
-      await axiosInstance.delete(`/api/mantenimiento/componentes/${id}`);
+      await axiosInstance.delete(`/mantenimiento/componentes/${id}`);
       await cargarComponentes();
     } catch (error: any) {
       console.error('Error al eliminar componente:', error);
@@ -348,6 +350,7 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
       {/* Acciones */}
       <div className="bg-gradient-to-r from-gray-50 to-slate-50 p-5 border-t border-gray-100/50">
         <div className="flex flex-wrap gap-3">
+          {/* Botón Monitoreo - visible para todos */}
           {onMonitoreo && (
             <button
               onClick={() => onMonitoreo(componente)}
@@ -357,6 +360,8 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
               <span>Monitoreo</span>
             </button>
           )}
+          
+          {/* Botón Ver Más - visible para todos */}
           <button
             onClick={() => onHistorial(componente)}
             className="flex-1 min-w-[80px] bg-white text-indigo-600 px-4 py-2.5 rounded-xl text-xs font-semibold hover:bg-indigo-50 transition-all duration-200 border border-indigo-200 hover:border-indigo-300 flex items-center justify-center space-x-2"
@@ -364,18 +369,33 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
             <span className="text-sm">👁️</span>
             <span>Ver Más</span>
           </button>
-          <button
-            onClick={() => onEditar(componente)}
-            className="flex-1 min-w-[70px] bg-white text-green-600 px-4 py-2.5 rounded-xl text-xs font-semibold hover:bg-green-50 transition-all duration-200 border border-green-200 hover:border-green-300"
-          >
-            ✏️ Editar
-          </button>
-          <button
-            onClick={() => onEliminar(componente._id!)}
-            className="bg-white text-red-600 px-4 py-2.5 rounded-xl text-xs font-semibold hover:bg-red-50 transition-all duration-200 border border-red-200 hover:border-red-300"
-          >
-            🗑️ Eliminar
-          </button>
+          
+          {/* Botón Editar - Solo ADMINISTRADOR y MECANICO */}
+          {(permissions.isAdmin || permissions.isMechanic) && (
+            <button
+              onClick={() => onEditar(componente)}
+              className="flex-1 min-w-[70px] bg-white text-green-600 px-4 py-2.5 rounded-xl text-xs font-semibold hover:bg-green-50 transition-all duration-200 border border-green-200 hover:border-green-300"
+            >
+              ✏️ Editar
+            </button>
+          )}
+          
+          {/* Botón Eliminar - Solo ADMINISTRADOR */}
+          {permissions.isAdmin && (
+            <button
+              onClick={() => onEliminar(componente._id!)}
+              className="bg-white text-red-600 px-4 py-2.5 rounded-xl text-xs font-semibold hover:bg-red-50 transition-all duration-200 border border-red-200 hover:border-red-300"
+            >
+              🗑️ Eliminar
+            </button>
+          )}
+
+          {/* Mensaje para roles sin permisos de edición */}
+          {!permissions.isAdmin && !permissions.isMechanic && (
+            <div className="flex-1 text-center py-2 text-xs text-gray-500 italic">
+              Solo visualización disponible
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -401,13 +421,16 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
                 className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
-            <button
-              onClick={handleNuevoComponente}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-            >
-              <span>➕</span>
-              <span>Nuevo Componente</span>
-            </button>
+            {/* Botón Nuevo Componente - Solo ADMINISTRADOR y MECANICO */}
+            {(permissions.isAdmin || permissions.isMechanic) && (
+              <button
+                onClick={handleNuevoComponente}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+              >
+                <span>➕</span>
+                <span>Nuevo Componente</span>
+              </button>
+            )}
           </div>
 
           {/* Filtros */}
@@ -586,13 +609,16 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
                 className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
-            <button
-              onClick={handleNuevoComponente}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-            >
-              <span>➕</span>
-              <span>Nuevo Componente</span>
-            </button>
+            {/* Botón Nuevo Componente - Solo ADMINISTRADOR y MECANICO */}
+            {(permissions.isAdmin || permissions.isMechanic) && (
+              <button
+                onClick={handleNuevoComponente}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+              >
+                <span>➕</span>
+                <span>Nuevo Componente</span>
+              </button>
+            )}
           </div>
 
           {/* Filtros */}

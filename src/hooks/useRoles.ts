@@ -1,16 +1,24 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { UserRole, ICurrentUser, IRolePermissions } from '../types/usuarios';
 import { obtenerPermisosUsuario } from '../utils/usuariosApi';
 
-// Hook personalizado para cargar datos del usuario
+// Tipos para información de rol
+interface IUserRoleInfo {
+  role: UserRole;
+  hierarchy: { level: number; description: string };
+  allPermissions: string[];
+}
+
+// Hook personalizado para cargar datos del usuario (mejorado)
 export const useCurrentUser = () => {
   const [currentUser, setCurrentUser] = useState<ICurrentUser | null>(null);
   const [permissions, setPermissions] = useState<IRolePermissions | null>(null);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [roleInfo, setRoleInfo] = useState<IUserRoleInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchUserData = async () => {
+  const fetchUserData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -21,38 +29,61 @@ export const useCurrentUser = () => {
         setCurrentUser(response.user);
         setPermissions(response.user.permissions);
         setUserRole(response.user.role);
+        
+        // Información adicional del rol si está disponible
+        if (response.roleInfo) {
+          setRoleInfo(response.roleInfo);
+        }
+        
+        console.log('✅ Datos de usuario cargados:', {
+          user: response.user.email,
+          role: response.user.role,
+          permissionsCount: Object.keys(response.user.permissions).filter(key => 
+            response.user.permissions[key as keyof IRolePermissions]
+          ).length
+        });
       } else {
         throw new Error('No se pudo obtener información del usuario');
       }
     } catch (err) {
-      console.error('Error al cargar datos del usuario:', err);
+      console.error('❌ Error al cargar datos del usuario:', err);
       setError(err instanceof Error ? err.message : 'Error desconocido');
+      
+      // Limpiar datos en caso de error
+      setCurrentUser(null);
+      setPermissions(null);
+      setUserRole(null);
+      setRoleInfo(null);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     await fetchUserData();
-  };
+  }, [fetchUserData]);
 
   useEffect(() => {
     fetchUserData();
-  }, []);
+  }, [fetchUserData]);
 
   return {
     currentUser,
     permissions,
     userRole,
+    roleInfo,
     loading,
     error,
-    refreshUser
+    refreshUser,
+    isAuthenticated: !!currentUser && !!userRole
   };
 };
 
-// Hook para verificar permisos específicos
+// Nota: El hook useAuth se encuentra en context/AuthProvider.tsx
+
+// Hook mejorado para verificar permisos específicos
 export const usePermissions = () => {
-  const { permissions, userRole } = useCurrentUser();
+  const { permissions, userRole, roleInfo } = useCurrentUser();
   
   return {
     // Permisos de usuarios
@@ -95,6 +126,10 @@ export const usePermissions = () => {
     canViewDashboard: permissions?.canViewDashboard || false,
     canViewAdvancedReports: permissions?.canViewAdvancedReports || false,
     
+    // Permisos de monitoreo
+    canViewMonitoring: permissions?.canViewMonitoring || false,
+    canManageMonitoring: permissions?.canManageMonitoring || false,
+    
     // Permisos de configuración
     canAccessSystemConfig: permissions?.canAccessSystemConfig || false,
     
@@ -116,7 +151,26 @@ export const usePermissions = () => {
     // Helper para verificar si puede realizar inspecciones
     canDoInspectionActions: userRole === UserRole.ADMINISTRADOR || 
                           userRole === UserRole.MECANICO || 
-                          userRole === UserRole.ESPECIALISTA
+                          userRole === UserRole.ESPECIALISTA,
+    
+    // Información del rol (nivel jerárquico)
+    roleLevel: roleInfo?.hierarchy?.level || 0,
+    roleDescription: roleInfo?.hierarchy?.description || '',
+    
+    // Helper para verificar si un rol es superior a otro
+    canManageRole: (targetRole: UserRole) => {
+      const roleLevels = {
+        [UserRole.ADMINISTRADOR]: 4,
+        [UserRole.MECANICO]: 3,
+        [UserRole.ESPECIALISTA]: 2,
+        [UserRole.COPILOTO]: 1
+      };
+      
+      const currentLevel = userRole ? roleLevels[userRole] : 0;
+      const targetLevel = roleLevels[targetRole];
+      
+      return currentLevel >= targetLevel;
+    }
   };
 };
 
@@ -164,6 +218,24 @@ export const useRouteAccess = (requiredPermissions: string[]) => {
   return {
     hasAccess: hasAccess(),
     loading,
+    permissions,
     canAccess: hasAccess
+  };
+};
+
+// Nota: El AuthProvider se encuentra en context/AuthProvider.tsx
+
+// Hook para obtener información del rol actual
+export const useRoleInfo = () => {
+  const { userRole, roleInfo, permissions } = useCurrentUser();
+  
+  return {
+    role: userRole,
+    roleLevel: roleInfo?.hierarchy?.level || 0,
+    roleDescription: roleInfo?.hierarchy?.description || '',
+    allPermissions: roleInfo?.allPermissions || [],
+    activePermissions: permissions ? Object.keys(permissions).filter(key => 
+      permissions[key as keyof IRolePermissions]
+    ) : []
   };
 };

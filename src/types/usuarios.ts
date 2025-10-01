@@ -70,6 +70,8 @@ export interface IRolePermissions {
   canViewCatalogs: boolean;
   canViewDashboard: boolean;
   canViewAdvancedReports: boolean;
+  canViewMonitoring: boolean;
+  canManageMonitoring: boolean;
   canAccessSystemConfig: boolean;
 }
 
@@ -88,4 +90,9 @@ export interface ICambiarRolResponse {
 export interface ICurrentUserResponse {
   success: boolean;
   user: ICurrentUser;
+  roleInfo?: {
+    role: UserRole;
+    hierarchy: { level: number; description: string };
+    allPermissions: string[];
+  };
 }

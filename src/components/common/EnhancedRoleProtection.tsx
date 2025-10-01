@@ -2,19 +2,19 @@ import React from 'react';
 import { UserRole } from '../../types/usuarios';
 import { usePermissions, useCurrentUser, useRoleInfo } from '../../hooks/useRoles';
 
-interface RoleProtectionProps {
+interface EnhancedRoleProtectionProps {
   children: React.ReactNode;
   requiredRoles?: UserRole[];
   requiredPermissions?: string[];
-  requireAllPermissions?: boolean; // Nuevo: requiere todos los permisos o solo uno
+  requireAllPermissions?: boolean;
   fallback?: React.ReactNode;
   hideWhenNoAccess?: boolean;
-  showLoadingState?: boolean; // Nuevo: mostrar estado de carga personalizado
-  debugMode?: boolean; // Nuevo: mostrar información de debug en desarrollo
+  showLoadingState?: boolean;
+  debugMode?: boolean;
 }
 
-// Componente mejorado para proteger contenido basado en roles
-export const RoleProtection: React.FC<RoleProtectionProps> = ({
+// Componente de protección mejorado
+export const EnhancedRoleProtection: React.FC<EnhancedRoleProtectionProps> = ({
   children,
   requiredRoles = [],
   requiredPermissions = [],
@@ -30,7 +30,7 @@ export const RoleProtection: React.FC<RoleProtectionProps> = ({
 
   // Debug en desarrollo
   if (debugMode && import.meta.env.DEV) {
-    console.log('🔒 RoleProtection Debug:', {
+    console.log('🔒 EnhancedRoleProtection Debug:', {
       userRole,
       roleLevel: roleInfo.roleLevel,
       requiredRoles,
@@ -74,47 +74,60 @@ export const RoleProtection: React.FC<RoleProtectionProps> = ({
     );
   }
 
+  // Función helper para verificar permisos individuales
+  const checkPermission = (permission: string): boolean => {
+    switch (permission) {
+      case 'MANAGE_USERS': return permissions.canManageUsers;
+      case 'VIEW_USERS': return permissions.canViewUsers;
+      case 'CREATE_COMPONENTS': return permissions.canCreateComponents;
+      case 'EDIT_COMPONENTS': return permissions.canEditComponents;
+      case 'DELETE_COMPONENTS': return permissions.canDeleteComponents;
+      case 'VIEW_COMPONENTS': return permissions.canViewComponents;
+      case 'CREATE_WORK_ORDERS': return permissions.canCreateWorkOrders;
+      case 'EDIT_WORK_ORDERS': return permissions.canEditWorkOrders;
+      case 'DELETE_WORK_ORDERS': return permissions.canDeleteWorkOrders;
+      case 'VIEW_WORK_ORDERS': return permissions.canViewWorkOrders;
+      case 'COMPLETE_WORK_ORDERS': return permissions.canCompleteWorkOrders;
+      case 'CREATE_INSPECTIONS': return permissions.canCreateInspections;
+      case 'EDIT_INSPECTIONS': return permissions.canEditInspections;
+      case 'DELETE_INSPECTIONS': return permissions.canDeleteInspections;
+      case 'VIEW_INSPECTIONS': return permissions.canViewInspections;
+      case 'CERTIFY_INSPECTIONS': return permissions.canCertifyInspections;
+      case 'CREATE_INVENTORY': return permissions.canCreateInventory;
+      case 'EDIT_INVENTORY': return permissions.canEditInventory;
+      case 'DELETE_INVENTORY': return permissions.canDeleteInventory;
+      case 'VIEW_INVENTORY': return permissions.canViewInventory;
+      case 'CREATE_CATALOGS': return permissions.canCreateCatalogs;
+      case 'EDIT_CATALOGS': return permissions.canEditCatalogs;
+      case 'DELETE_CATALOGS': return permissions.canDeleteCatalogs;
+      case 'VIEW_CATALOGS': return permissions.canViewCatalogs;
+      case 'VIEW_DASHBOARD': return permissions.canViewDashboard;
+      case 'VIEW_ADVANCED_REPORTS': return permissions.canViewAdvancedReports;
+      case 'VIEW_MONITORING': return permissions.canViewMonitoring;
+      case 'MANAGE_MONITORING': return permissions.canManageMonitoring;
+      case 'SYSTEM_CONFIG': return permissions.canAccessSystemConfig;
+      default: return false;
+    }
+  };
+
   // Verificar roles requeridos
   const hasRequiredRole = requiredRoles.length === 0 || 
     (userRole && requiredRoles.includes(userRole));
 
-  // Verificar permisos requeridos
-  const hasRequiredPermissions = requiredPermissions.length === 0 || 
-    requiredPermissions.some(permission => {
-      switch (permission) {
-        case 'MANAGE_USERS': return permissions.canManageUsers;
-        case 'VIEW_USERS': return permissions.canViewUsers;
-        case 'CREATE_COMPONENTS': return permissions.canCreateComponents;
-        case 'EDIT_COMPONENTS': return permissions.canEditComponents;
-        case 'DELETE_COMPONENTS': return permissions.canDeleteComponents;
-        case 'VIEW_COMPONENTS': return permissions.canViewComponents;
-        case 'CREATE_WORK_ORDERS': return permissions.canCreateWorkOrders;
-        case 'EDIT_WORK_ORDERS': return permissions.canEditWorkOrders;
-        case 'DELETE_WORK_ORDERS': return permissions.canDeleteWorkOrders;
-        case 'VIEW_WORK_ORDERS': return permissions.canViewWorkOrders;
-        case 'COMPLETE_WORK_ORDERS': return permissions.canCompleteWorkOrders;
-        case 'CREATE_INSPECTIONS': return permissions.canCreateInspections;
-        case 'EDIT_INSPECTIONS': return permissions.canEditInspections;
-        case 'DELETE_INSPECTIONS': return permissions.canDeleteInspections;
-        case 'VIEW_INSPECTIONS': return permissions.canViewInspections;
-        case 'CERTIFY_INSPECTIONS': return permissions.canCertifyInspections;
-        case 'CREATE_INVENTORY': return permissions.canCreateInventory;
-        case 'EDIT_INVENTORY': return permissions.canEditInventory;
-        case 'DELETE_INVENTORY': return permissions.canDeleteInventory;
-        case 'VIEW_INVENTORY': return permissions.canViewInventory;
-        case 'VIEW_DASHBOARD': return permissions.canViewDashboard;
-        case 'VIEW_ADVANCED_REPORTS': return permissions.canViewAdvancedReports;
-        case 'SYSTEM_CONFIG': return permissions.canAccessSystemConfig;
-        default: return false;
-      }
-    });
+  // Verificar permisos requeridos (mejorado con lógica AND/OR)
+  const hasRequiredPermissions = requiredPermissions.length === 0 || (() => {
+    const permissionResults = requiredPermissions.map(checkPermission);
+    return requireAllPermissions 
+      ? permissionResults.every(Boolean) 
+      : permissionResults.some(Boolean);
+  })();
 
+  // Verificar acceso combinado
   const hasAccess = hasRequiredRole && hasRequiredPermissions;
 
-  // Si no tiene acceso
   if (!hasAccess) {
     if (hideWhenNoAccess) {
-      return null; // No renderizar nada
+      return null;
     }
     
     return fallback || (
@@ -128,6 +141,13 @@ export const RoleProtection: React.FC<RoleProtectionProps> = ({
           <div className="ml-3">
             <p className="text-sm text-yellow-700">
               No tienes permisos suficientes para ver este contenido.
+              {debugMode && import.meta.env.DEV && (
+                <div className="mt-2 text-xs">
+                  <strong>Debug:</strong> Rol actual: {userRole}, 
+                  Roles requeridos: {requiredRoles.join(', ') || 'Ninguno'}, 
+                  Permisos requeridos: {requiredPermissions.join(', ') || 'Ninguno'}
+                </div>
+              )}
             </p>
           </div>
         </div>
@@ -139,51 +159,56 @@ export const RoleProtection: React.FC<RoleProtectionProps> = ({
   return <>{children}</>;
 };
 
-// Componente específico para acciones administrativas
-export const AdminOnly: React.FC<{ children: React.ReactNode; fallback?: React.ReactNode }> = ({ 
-  children, 
-  fallback 
-}) => (
-  <RoleProtection 
+// Componentes específicos mejorados
+export const AdminOnlyEnhanced: React.FC<{ 
+  children: React.ReactNode; 
+  fallback?: React.ReactNode;
+  debugMode?: boolean;
+}> = ({ children, fallback, debugMode = false }) => (
+  <EnhancedRoleProtection 
     requiredRoles={[UserRole.ADMINISTRADOR]} 
     fallback={fallback}
     hideWhenNoAccess={true}
+    debugMode={debugMode}
   >
     {children}
-  </RoleProtection>
+  </EnhancedRoleProtection>
 );
 
-// Componente para acciones de mantenimiento
-export const MaintenanceOnly: React.FC<{ children: React.ReactNode; fallback?: React.ReactNode }> = ({ 
-  children, 
-  fallback 
-}) => (
-  <RoleProtection 
+export const MaintenanceOnlyEnhanced: React.FC<{ 
+  children: React.ReactNode; 
+  fallback?: React.ReactNode;
+  debugMode?: boolean;
+}> = ({ children, fallback, debugMode = false }) => (
+  <EnhancedRoleProtection 
     requiredRoles={[UserRole.ADMINISTRADOR, UserRole.MECANICO]} 
     fallback={fallback}
     hideWhenNoAccess={true}
+    debugMode={debugMode}
   >
     {children}
-  </RoleProtection>
+  </EnhancedRoleProtection>
 );
 
-// Componente para inspecciones
-export const InspectionCapable: React.FC<{ children: React.ReactNode; fallback?: React.ReactNode }> = ({ 
-  children, 
-  fallback 
-}) => (
-  <RoleProtection 
+export const InspectionCapableEnhanced: React.FC<{ 
+  children: React.ReactNode; 
+  fallback?: React.ReactNode;
+  debugMode?: boolean;
+}> = ({ children, fallback, debugMode = false }) => (
+  <EnhancedRoleProtection 
     requiredRoles={[UserRole.ADMINISTRADOR, UserRole.MECANICO, UserRole.ESPECIALISTA]} 
     fallback={fallback}
     hideWhenNoAccess={true}
+    debugMode={debugMode}
   >
     {children}
-  </RoleProtection>
+  </EnhancedRoleProtection>
 );
 
-// Hook para usar con botones y acciones específicas
-export const useActionPermission = () => {
+// Hook para acciones específicas mejorado
+export const useEnhancedActionPermission = () => {
   const permissions = usePermissions();
+  const roleInfo = useRoleInfo();
   
   return {
     // Funciones helper para verificar acciones específicas
@@ -204,8 +229,16 @@ export const useActionPermission = () => {
     canManageUser: () => permissions.canManageUsers,
     canViewUsers: () => permissions.canViewUsers,
     
-    canAccessConfig: () => permissions.canAccessSystemConfig
+    canAccessConfig: () => permissions.canAccessSystemConfig,
+    
+    // Información de contexto mejorada
+    roleLevel: roleInfo.roleLevel,
+    roleDescription: roleInfo.roleDescription,
+    activePermissionsCount: roleInfo.activePermissions.length,
+    
+    // Helper para verificar si puede gestionar un rol específico
+    canManageRole: (targetRole: UserRole) => permissions.canManageRole(targetRole)
   };
 };
 
-export default RoleProtection;
+export default EnhancedRoleProtection;

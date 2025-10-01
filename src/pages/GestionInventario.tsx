@@ -137,7 +137,7 @@ const GestionInventario: React.FC = () => {
             {/* Header */}
             <div className="flex justify-between items-center">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Gestión de Inventario</h1>
+                <h1 className="text-2xl font-bold text-gray-900">  Inventario</h1>
                 <p className="text-gray-600">Administra el inventario de aeronaves</p>
               </div>
               <button

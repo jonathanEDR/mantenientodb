@@ -34,7 +34,7 @@ export default function Dashboard() {
         }
 
         // Verificar si el usuario ya está en la BD
-        const response = await axiosInstance.get('/api/auth/me', {
+        const response = await axiosInstance.get('/auth/me', {
           headers: {
             Authorization: `Bearer ${token}`
           }
@@ -58,7 +58,7 @@ export default function Dashboard() {
 
             console.log('Enviando datos de registro:', userData);
 
-            const registerResponse = await axiosInstance.post('/api/auth/register', userData);
+            const registerResponse = await axiosInstance.post('/auth/register', userData);
             setDbUser(registerResponse.data.user);
             console.log('✅ Usuario registrado exitosamente en BD:', registerResponse.data.user);
 

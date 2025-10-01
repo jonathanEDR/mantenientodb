@@ -33,49 +33,49 @@ export const obtenerComponentes = async (filtros?: {
     });
   }
   
-  const response = await axiosInstance.get(`/api/mantenimiento/componentes?${params}`);
+  const response = await axiosInstance.get(`/mantenimiento/componentes?${params}`);
   return response.data;
 };
 
 // Obtener estadísticas de componentes
 export const obtenerEstadisticasComponentes = async (): Promise<IEstadisticasComponentesResponse> => {
-  const response = await axiosInstance.get(`/api/mantenimiento/componentes/stats`);
+  const response = await axiosInstance.get(`/mantenimiento/componentes/stats`);
   return response.data;
 };
 
 // Obtener componentes con alertas
 export const obtenerComponentesConAlertas = async (): Promise<IComponentesResponse> => {
-  const response = await axiosInstance.get(`/api/mantenimiento/componentes/alertas`);
+  const response = await axiosInstance.get(`/mantenimiento/componentes/alertas`);
   return response.data;
 };
 
 // Obtener componentes por aeronave
 export const obtenerComponentesPorAeronave = async (matricula: string): Promise<IComponentesResponse> => {
-  const response = await axiosInstance.get(`/api/mantenimiento/componentes/aeronave/${matricula}`);
+  const response = await axiosInstance.get(`/mantenimiento/componentes/aeronave/${matricula}`);
   return response.data;
 };
 
 // Obtener un componente específico
 export const obtenerComponente = async (id: string): Promise<IComponenteResponse> => {
-  const response = await axiosInstance.get(`/api/mantenimiento/componentes/${id}`);
+  const response = await axiosInstance.get(`/mantenimiento/componentes/${id}`);
   return response.data;
 };
 
 // Crear nuevo componente
 export const crearComponente = async (data: ICrearComponenteData): Promise<IComponenteResponse> => {
-  const response = await axiosInstance.post(`/api/mantenimiento/componentes`, data);
+  const response = await axiosInstance.post(`/mantenimiento/componentes`, data);
   return response.data;
 };
 
 // Actualizar componente
 export const actualizarComponente = async (id: string, data: Partial<ICrearComponenteData>): Promise<IComponenteResponse> => {
-  const response = await axiosInstance.put(`/api/mantenimiento/componentes/${id}`, data);
+  const response = await axiosInstance.put(`/mantenimiento/componentes/${id}`, data);
   return response.data;
 };
 
 // Actualizar componente desde historial (con registros adicionales)
 export const actualizarComponenteHistorial = async (id: string, data: any): Promise<IComponenteResponse> => {
-  const response = await axiosInstance.put(`/api/mantenimiento/componentes/${id}/historial`, data);
+  const response = await axiosInstance.put(`/mantenimiento/componentes/${id}/historial`, data);
   return response.data;
 };
 
@@ -84,7 +84,7 @@ export const instalarComponente = async (
   id: string, 
   data: { aeronaveId: string; ubicacion: string; fechaInstalacion: Date }
 ): Promise<IComponenteResponse> => {
-  const response = await axiosInstance.put(`/api/mantenimiento/componentes/${id}/instalar`, data);
+  const response = await axiosInstance.put(`/mantenimiento/componentes/${id}/instalar`, data);
   return response.data;
 };
 
@@ -93,13 +93,13 @@ export const removerComponente = async (
   id: string, 
   data: { fechaRemocion: Date; motivo: string }
 ): Promise<IComponenteResponse> => {
-  const response = await axiosInstance.put(`/api/mantenimiento/componentes/${id}/remover`, data);
+  const response = await axiosInstance.put(`/mantenimiento/componentes/${id}/remover`, data);
   return response.data;
 };
 
 // Eliminar componente
 export const eliminarComponente = async (id: string): Promise<void> => {
-  await axiosInstance.delete(`/api/mantenimiento/componentes/${id}`);
+  await axiosInstance.delete(`/mantenimiento/componentes/${id}`);
 };
 
 // ========== APIs de Órdenes de Trabajo ==========
@@ -125,20 +125,20 @@ export const obtenerOrdenesTrabajo = async (filtros?: {
     });
   }
   
-  const response = await axiosInstance.get(`/api/mantenimiento/ordenes?${params}`);
+  const response = await axiosInstance.get(`/mantenimiento/ordenes?${params}`);
   return response.data;
 };
 
 // Obtener estadísticas de órdenes
 export const obtenerEstadisticasOrdenes = async (): Promise<IEstadisticasOrdenesResponse> => {
-  const response = await axiosInstance.get(`/api/mantenimiento/ordenes/stats`);
+  const response = await axiosInstance.get(`/mantenimiento/ordenes/stats`);
   return response.data;
 };
 
 // Obtener órdenes próximas a vencer
 export const obtenerOrdenesVencimientos = async (dias?: number): Promise<IOrdenesTrabajoResponse> => {
   const params = dias ? `?dias=${dias}` : '';
-  const response = await axiosInstance.get(`/api/mantenimiento/ordenes/vencimientos${params}`);
+  const response = await axiosInstance.get(`/mantenimiento/ordenes/vencimientos${params}`);
   return response.data;
 };
 
@@ -158,25 +158,25 @@ export const obtenerOrdenesPorTecnico = async (
   }
   
   const queryString = params.toString() ? `?${params}` : '';
-  const response = await axiosInstance.get(`/api/mantenimiento/ordenes/tecnico/${tecnicoId}${queryString}`);
+  const response = await axiosInstance.get(`/mantenimiento/ordenes/tecnico/${tecnicoId}${queryString}`);
   return response.data;
 };
 
 // Obtener una orden específica
 export const obtenerOrdenTrabajo = async (id: string): Promise<IOrdenTrabajoResponse> => {
-  const response = await axiosInstance.get(`/api/mantenimiento/ordenes/${id}`);
+  const response = await axiosInstance.get(`/mantenimiento/ordenes/${id}`);
   return response.data;
 };
 
 // Crear nueva orden de trabajo
 export const crearOrdenTrabajo = async (data: ICrearOrdenTrabajoData): Promise<IOrdenTrabajoResponse> => {
-  const response = await axiosInstance.post(`/api/mantenimiento/ordenes`, data);
+  const response = await axiosInstance.post(`/mantenimiento/ordenes`, data);
   return response.data;
 };
 
 // Actualizar orden de trabajo
 export const actualizarOrdenTrabajo = async (id: string, data: Partial<ICrearOrdenTrabajoData>): Promise<IOrdenTrabajoResponse> => {
-  const response = await axiosInstance.put(`/api/mantenimiento/ordenes/${id}`, data);
+  const response = await axiosInstance.put(`/mantenimiento/ordenes/${id}`, data);
   return response.data;
 };
 
@@ -185,7 +185,7 @@ export const cambiarEstadoOrden = async (
   id: string, 
   data: { estado: string; observaciones?: string }
 ): Promise<IOrdenTrabajoResponse> => {
-  const response = await axiosInstance.put(`/api/mantenimiento/ordenes/${id}/estado`, data);
+  const response = await axiosInstance.put(`/mantenimiento/ordenes/${id}/estado`, data);
   return response.data;
 };
 
@@ -199,25 +199,25 @@ export const registrarTrabajo = async (
     observaciones?: string;
   }
 ): Promise<IOrdenTrabajoResponse> => {
-  const response = await axiosInstance.post(`/api/mantenimiento/ordenes/${id}/trabajo`, data);
+  const response = await axiosInstance.post(`/mantenimiento/ordenes/${id}/trabajo`, data);
   return response.data;
 };
 
 // Eliminar orden de trabajo
 export const eliminarOrdenTrabajo = async (id: string): Promise<void> => {
-  await axiosInstance.delete(`/api/mantenimiento/ordenes/${id}`);
+  await axiosInstance.delete(`/mantenimiento/ordenes/${id}`);
 };
 
 // ========== APIs de Dashboard ==========
 
 // Obtener resumen del dashboard
 export const obtenerResumenDashboard = async (): Promise<IResumenDashboardResponse> => {
-  const response = await axiosInstance.get(`/api/mantenimiento/dashboard/resumen`);
+  const response = await axiosInstance.get(`/mantenimiento/dashboard/resumen`);
   return response.data;
 };
 
 // Obtener alertas activas
 export const obtenerAlertas = async (): Promise<IAlertasResponse> => {
-  const response = await axiosInstance.get(`/api/mantenimiento/dashboard/alertas`);
+  const response = await axiosInstance.get(`/mantenimiento/dashboard/alertas`);
   return response.data;
 };

@@ -196,7 +196,7 @@ export default function GestionOrdenes() {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Gestión de Órdenes de Trabajo</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Órdenes de Trabajo</h1>
             <p className="text-gray-600">Administra las órdenes de mantenimiento</p>
           </div>
           <button

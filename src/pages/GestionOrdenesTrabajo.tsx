@@ -96,7 +96,7 @@ export default function GestionOrdenesTrabajo() {
     <DashboardLayout>
       <div className="p-6">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Gestión de Órdenes de Trabajo</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Órdenes de Trabajo</h1>
           <p className="text-gray-600">Administra las órdenes de mantenimiento de las aeronaves</p>
         </div>
 

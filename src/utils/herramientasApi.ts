@@ -24,7 +24,7 @@ export const obtenerCatalogoComponentes = async (filtros?: {
     if (filtros?.page) params.append('page', filtros.page.toString());
     if (filtros?.limit) params.append('limit', filtros.limit.toString());
 
-    const response = await axiosInstance.get(`/api/herramientas/catalogos/componentes?${params}`);
+    const response = await axiosInstance.get(`/herramientas/catalogos/componentes?${params}`);
     
     return {
       success: true,
@@ -47,7 +47,7 @@ export const obtenerCatalogoComponentes = async (filtros?: {
 // Obtener un elemento específico
 export const obtenerCatalogoComponente = async (id: string) => {
   try {
-    const response = await axiosInstance.get(`/api/herramientas/catalogos/componentes/${id}`);
+    const response = await axiosInstance.get(`/herramientas/catalogos/componentes/${id}`);
     return {
       success: true,
       data: response.data,
@@ -66,7 +66,7 @@ export const obtenerCatalogoComponente = async (id: string) => {
 // Crear nuevo elemento
 export const crearCatalogoComponente = async (data: CatalogoComponenteFormData) => {
   try {
-    const response = await axiosInstance.post('/api/herramientas/catalogos/componentes', data);
+    const response = await axiosInstance.post('/herramientas/catalogos/componentes', data);
     return {
       success: true,
       data: response.data,
@@ -85,7 +85,7 @@ export const crearCatalogoComponente = async (data: CatalogoComponenteFormData) 
 // Actualizar elemento
 export const actualizarCatalogoComponente = async (id: string, data: CatalogoComponenteFormData) => {
   try {
-    const response = await axiosInstance.put(`/api/herramientas/catalogos/componentes/${id}`, data);
+    const response = await axiosInstance.put(`/herramientas/catalogos/componentes/${id}`, data);
     return {
       success: true,
       data: response.data,
@@ -104,7 +104,7 @@ export const actualizarCatalogoComponente = async (id: string, data: CatalogoCom
 // Eliminar elemento
 export const eliminarCatalogoComponente = async (id: string) => {
   try {
-    const response = await axiosInstance.delete(`/api/herramientas/catalogos/componentes/${id}`);
+    const response = await axiosInstance.delete(`/herramientas/catalogos/componentes/${id}`);
     return {
       success: true,
       data: response.data,
@@ -137,7 +137,7 @@ export const obtenerCatalogoControlMonitoreo = async (filtros?: {
     if (filtros?.page) params.append('page', filtros.page.toString());
     if (filtros?.limit) params.append('limit', filtros.limit.toString());
 
-    const response = await axiosInstance.get(`/api/herramientas/catalogos/control-monitoreo?${params}`);
+    const response = await axiosInstance.get(`/herramientas/catalogos/control-monitoreo?${params}`);
     
     return {
       success: true,
@@ -160,7 +160,7 @@ export const obtenerCatalogoControlMonitoreo = async (filtros?: {
 // Crear nuevo elemento en catálogo de control y monitoreo
 export const crearCatalogoControlMonitoreo = async (data: CatalogoControlMonitoreoFormData) => {
   try {
-    const response = await axiosInstance.post('/api/herramientas/catalogos/control-monitoreo', data);
+    const response = await axiosInstance.post('/herramientas/catalogos/control-monitoreo', data);
     return {
       success: true,
       data: response.data,
@@ -179,7 +179,7 @@ export const crearCatalogoControlMonitoreo = async (data: CatalogoControlMonitor
 // Actualizar elemento en catálogo de control y monitoreo
 export const actualizarCatalogoControlMonitoreo = async (id: string, data: CatalogoControlMonitoreoFormData) => {
   try {
-    const response = await axiosInstance.put(`/api/herramientas/catalogos/control-monitoreo/${id}`, data);
+    const response = await axiosInstance.put(`/herramientas/catalogos/control-monitoreo/${id}`, data);
     return {
       success: true,
       data: response.data,
@@ -198,7 +198,7 @@ export const actualizarCatalogoControlMonitoreo = async (id: string, data: Catal
 // Eliminar elemento del catálogo de control y monitoreo
 export const eliminarCatalogoControlMonitoreo = async (id: string) => {
   try {
-    const response = await axiosInstance.delete(`/api/herramientas/catalogos/control-monitoreo/${id}`);
+    const response = await axiosInstance.delete(`/herramientas/catalogos/control-monitoreo/${id}`);
     return {
       success: true,
       data: response.data,

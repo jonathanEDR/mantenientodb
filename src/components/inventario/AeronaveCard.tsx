@@ -1,5 +1,6 @@
 import React from 'react';
 import { IAeronaveCardProps } from '../../types/inventario/index';
+import { usePermissions } from '../../hooks/useRoles';
 
 const AeronaveCard: React.FC<IAeronaveCardProps> = ({
   aeronave,
@@ -9,6 +10,7 @@ const AeronaveCard: React.FC<IAeronaveCardProps> = ({
   onGestionarHoras,
   obtenerColorEstado
 }) => {
+  const permissions = usePermissions();
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-lg hover:border-blue-200 transition-all duration-300 overflow-hidden group">
       {/* Header de la tarjeta */}
@@ -88,8 +90,11 @@ const AeronaveCard: React.FC<IAeronaveCardProps> = ({
 
       {/* Footer con acciones */}
       <div className="bg-gray-50 px-6 py-4 border-t border-gray-100">
-        <div className="grid grid-cols-2 gap-2">
-          {/* Primera fila */}
+        <div className={`grid gap-2 ${
+          permissions.isAdmin ? 'grid-cols-2' : 
+          (permissions.isMechanic ? 'grid-cols-2' : 'grid-cols-2')
+        }`}>
+          {/* Primera fila - Botones siempre visibles */}
           <button
             onClick={() => onVerComponentes(aeronave)}
             className="bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors flex items-center justify-center space-x-1"
@@ -109,25 +114,39 @@ const AeronaveCard: React.FC<IAeronaveCardProps> = ({
             <span>Horas</span>
           </button>
           
-          {/* Segunda fila */}
-          <button
-            onClick={() => onEditar(aeronave)}
-            className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center justify-center space-x-1"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-            <span>Editar</span>
-          </button>
-          <button
-            onClick={() => onEliminar(aeronave)}
-            className="bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors flex items-center justify-center space-x-1"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-            <span>Eliminar</span>
-          </button>
+          {/* Segunda fila - Botones con restricciones por rol */}
+          {/* Botón Editar: ADMINISTRADOR y MECANICO */}
+          {(permissions.isAdmin || permissions.isMechanic) && (
+            <button
+              onClick={() => onEditar(aeronave)}
+              className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center justify-center space-x-1"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              <span>Editar</span>
+            </button>
+          )}
+          
+          {/* Botón Eliminar: Solo ADMINISTRADOR */}
+          {permissions.isAdmin && (
+            <button
+              onClick={() => onEliminar(aeronave)}
+              className="bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors flex items-center justify-center space-x-1"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              <span>Eliminar</span>
+            </button>
+          )}
+
+          {/* Espacio vacío para roles sin botones de acción (ESPECIALISTA y COPILOTO) */}
+          {!permissions.isAdmin && !permissions.isMechanic && (
+            <div className="col-span-2 text-center py-2 text-sm text-gray-500">
+              Solo visualización permitida
+            </div>
+          )}
         </div>
       </div>
     </div>

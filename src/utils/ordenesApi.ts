@@ -1,25 +1,5 @@
-import axios from 'axios';
+import axiosInstance from './axiosConfig';
 import { IOrdenTrabajo, TipoMantenimiento, PrioridadOrden, EstadoOrden } from '../types/mantenimiento';
-
-// Configurar base URL
-const API_BASE_URL = (import.meta as any).env.VITE_API_BASE_URL || 'http://localhost:5000';
-const BASE_URL = `${API_BASE_URL}/api/mantenimiento/ordenes`;
-
-// Función helper para obtener headers de autenticación
-const getAuthHeaders = async () => {
-  try {
-    let token = null;
-    
-    if (typeof window !== 'undefined' && window.Clerk?.session) {
-      token = await window.Clerk.session.getToken();
-    }
-
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  } catch (error) {
-    console.warn('Error al obtener token de autenticación:', error);
-    return {};
-  }
-};
 
 // Interfaces para respuestas de la API
 export interface IOrdenesResponse {
@@ -84,8 +64,6 @@ export interface ICrearOrdenData {
  */
 export const obtenerOrdenes = async (filtros?: IFiltrosOrdenes): Promise<IOrdenesResponse> => {
   try {
-    const headers = await getAuthHeaders();
-    
     // Construir query parameters
     const params = new URLSearchParams();
     if (filtros) {
@@ -94,9 +72,9 @@ export const obtenerOrdenes = async (filtros?: IFiltrosOrdenes): Promise<IOrdene
       });
     }
 
-    const url = params.toString() ? `${BASE_URL}?${params.toString()}` : BASE_URL;
-    
-    const response = await axios.get(url, { headers });
+    const url = params.toString() ? `/mantenimiento/ordenes?${params.toString()}` : '/mantenimiento/ordenes';
+
+    const response = await axiosInstance.get(url);
     return response.data;
   } catch (error) {
     console.error('Error al obtener órdenes de trabajo:', error);
@@ -109,8 +87,7 @@ export const obtenerOrdenes = async (filtros?: IFiltrosOrdenes): Promise<IOrdene
  */
 export const obtenerOrdenPorId = async (id: string): Promise<IOrdenResponse> => {
   try {
-    const headers = await getAuthHeaders();
-    const response = await axios.get(`${BASE_URL}/${id}`, { headers });
+    const response = await axiosInstance.get(`/mantenimiento/ordenes/${id}`);
     return response.data;
   } catch (error) {
     console.error(`Error al obtener orden ${id}:`, error);
@@ -123,8 +100,7 @@ export const obtenerOrdenPorId = async (id: string): Promise<IOrdenResponse> => 
  */
 export const crearOrden = async (ordenData: ICrearOrdenData): Promise<IOrdenResponse> => {
   try {
-    const headers = await getAuthHeaders();
-    const response = await axios.post(BASE_URL, ordenData, { headers });
+    const response = await axiosInstance.post('/mantenimiento/ordenes', ordenData);
     return response.data;
   } catch (error) {
     console.error('Error al crear orden de trabajo:', error);
@@ -137,8 +113,7 @@ export const crearOrden = async (ordenData: ICrearOrdenData): Promise<IOrdenResp
  */
 export const actualizarOrden = async (id: string, ordenData: Partial<ICrearOrdenData>): Promise<IOrdenResponse> => {
   try {
-    const headers = await getAuthHeaders();
-    const response = await axios.put(`${BASE_URL}/${id}`, ordenData, { headers });
+    const response = await axiosInstance.put(`/mantenimiento/ordenes/${id}`, ordenData);
     return response.data;
   } catch (error) {
     console.error(`Error al actualizar orden ${id}:`, error);
@@ -151,8 +126,7 @@ export const actualizarOrden = async (id: string, ordenData: Partial<ICrearOrden
  */
 export const eliminarOrden = async (id: string): Promise<{ success: boolean; message?: string }> => {
   try {
-    const headers = await getAuthHeaders();
-    const response = await axios.delete(`${BASE_URL}/${id}`, { headers });
+    const response = await axiosInstance.delete(`/mantenimiento/ordenes/${id}`);
     return response.data;
   } catch (error) {
     console.error(`Error al eliminar orden ${id}:`, error);
@@ -165,8 +139,7 @@ export const eliminarOrden = async (id: string): Promise<{ success: boolean; mes
  */
 export const obtenerEstadisticasOrdenes = async (): Promise<IEstadisticasOrdenesResponse> => {
   try {
-    const headers = await getAuthHeaders();
-    const response = await axios.get(`${BASE_URL}/stats`, { headers });
+    const response = await axiosInstance.get('/mantenimiento/ordenes/stats');
     return response.data;
   } catch (error) {
     console.error('Error al obtener estadísticas de órdenes:', error);
@@ -179,8 +152,7 @@ export const obtenerEstadisticasOrdenes = async (): Promise<IEstadisticasOrdenes
  */
 export const cambiarEstadoOrden = async (id: string, nuevoEstado: EstadoOrden): Promise<IOrdenResponse> => {
   try {
-    const headers = await getAuthHeaders();
-    const response = await axios.patch(`${BASE_URL}/${id}/estado`, { estado: nuevoEstado }, { headers });
+    const response = await axiosInstance.patch(`/mantenimiento/ordenes/${id}/estado`, { estado: nuevoEstado });
     return response.data;
   } catch (error) {
     console.error(`Error al cambiar estado de orden ${id}:`, error);
@@ -193,8 +165,7 @@ export const cambiarEstadoOrden = async (id: string, nuevoEstado: EstadoOrden): 
  */
 export const asignarTecnico = async (id: string, tecnicoId: string): Promise<IOrdenResponse> => {
   try {
-    const headers = await getAuthHeaders();
-    const response = await axios.patch(`${BASE_URL}/${id}/asignar-tecnico`, { tecnicoAsignado: tecnicoId }, { headers });
+    const response = await axiosInstance.patch(`/mantenimiento/ordenes/${id}/asignar-tecnico`, { tecnicoAsignado: tecnicoId });
     return response.data;
   } catch (error) {
     console.error(`Error al asignar técnico a orden ${id}:`, error);
@@ -206,16 +177,15 @@ export const asignarTecnico = async (id: string, tecnicoId: string): Promise<IOr
  * Completar una orden de trabajo
  */
 export const completarOrden = async (
-  id: string, 
-  datos: { 
-    horasReales: number; 
-    observaciones?: string; 
-    certificacion?: any 
+  id: string,
+  datos: {
+    horasReales: number;
+    observaciones?: string;
+    certificacion?: any
   }
 ): Promise<IOrdenResponse> => {
   try {
-    const headers = await getAuthHeaders();
-    const response = await axios.patch(`${BASE_URL}/${id}/completar`, datos, { headers });
+    const response = await axiosInstance.patch(`/mantenimiento/ordenes/${id}/completar`, datos);
     return response.data;
   } catch (error) {
     console.error(`Error al completar orden ${id}:`, error);
@@ -228,9 +198,8 @@ export const completarOrden = async (
  */
 export const obtenerOrdenesVencidas = async (dias?: number): Promise<IOrdenesResponse> => {
   try {
-    const headers = await getAuthHeaders();
     const params = dias ? `?dias=${dias}` : '';
-    const response = await axios.get(`${BASE_URL}/vencidas${params}`, { headers });
+    const response = await axiosInstance.get(`/mantenimiento/ordenes/vencidas${params}`);
     return response.data;
   } catch (error) {
     console.error('Error al obtener órdenes vencidas:', error);

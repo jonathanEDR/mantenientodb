@@ -87,7 +87,7 @@ export const obtenerInspecciones = async (filtros?: IFiltrosInspecciones): Promi
  */
 export const obtenerInspeccionPorId = async (id: string): Promise<IAPIResponse<IInspeccion>> => {
   try {
-    const response = await axiosInstance.get(`/api/mantenimiento/inspecciones/${id}`);
+    const response = await axiosInstance.get(`/mantenimiento/inspecciones/${id}`);
     
     return {
       success: true,
@@ -108,7 +108,7 @@ export const obtenerInspeccionPorId = async (id: string): Promise<IAPIResponse<I
  */
 export const crearInspeccion = async (inspeccionData: ICrearInspeccionData): Promise<IAPIResponse<IInspeccion>> => {
   try {
-    const response = await axiosInstance.post('/api/mantenimiento/inspecciones', inspeccionData);
+    const response = await axiosInstance.post('/mantenimiento/inspecciones', inspeccionData);
     
     return {
       success: true,
@@ -129,7 +129,7 @@ export const crearInspeccion = async (inspeccionData: ICrearInspeccionData): Pro
  */
 export const actualizarInspeccion = async (id: string, inspeccionData: Partial<ICrearInspeccionData>): Promise<IAPIResponse<IInspeccion>> => {
   try {
-    const response = await axiosInstance.put(`/api/mantenimiento/inspecciones/${id}`, inspeccionData);
+    const response = await axiosInstance.put(`/mantenimiento/inspecciones/${id}`, inspeccionData);
     
     return {
       success: true,
@@ -150,7 +150,7 @@ export const actualizarInspeccion = async (id: string, inspeccionData: Partial<I
  */
 export const eliminarInspeccion = async (id: string): Promise<IAPIResponse<boolean>> => {
   try {
-    await axiosInstance.delete(`/api/mantenimiento/inspecciones/${id}`);
+    await axiosInstance.delete(`/mantenimiento/inspecciones/${id}`);
     
     return {
       success: true,
@@ -198,7 +198,7 @@ export const completarInspeccion = async (id: string, observaciones?: string): P
  */
 export const obtenerEstadisticasInspecciones = async (): Promise<IAPIResponse<IEstadisticasInspecciones>> => {
   try {
-    const response = await axiosInstance.get('/api/mantenimiento/inspecciones/estadisticas');
+    const response = await axiosInstance.get('/mantenimiento/inspecciones/estadisticas');
     
     return {
       success: true,
@@ -227,7 +227,7 @@ export const obtenerEstadisticasInspecciones = async (): Promise<IAPIResponse<IE
  */
 export const obtenerInspeccionesVencidas = async (): Promise<IAPIResponse<IInspeccion[]>> => {
   try {
-    const response = await axiosInstance.get('/api/mantenimiento/inspecciones/vencidas');
+    const response = await axiosInstance.get('/mantenimiento/inspecciones/vencidas');
     
     return {
       success: true,
@@ -248,7 +248,7 @@ export const obtenerInspeccionesVencidas = async (): Promise<IAPIResponse<IInspe
  */
 export const obtenerInspeccionesProximasVencer = async (dias: number = 7): Promise<IAPIResponse<IInspeccion[]>> => {
   try {
-    const response = await axiosInstance.get(`/api/mantenimiento/inspecciones/proximas-vencer?dias=${dias}`);
+    const response = await axiosInstance.get(`/mantenimiento/inspecciones/proximas-vencer?dias=${dias}`);
     
     return {
       success: true,
@@ -269,7 +269,7 @@ export const obtenerInspeccionesProximasVencer = async (dias: number = 7): Promi
  */
 export const obtenerInspeccionesPorAeronave = async (aeronaveId: string): Promise<IAPIResponse<IInspeccion[]>> => {
   try {
-    const response = await axiosInstance.get(`/api/mantenimiento/inspecciones/aeronave/${aeronaveId}`);
+    const response = await axiosInstance.get(`/mantenimiento/inspecciones/aeronave/${aeronaveId}`);
     
     return {
       success: true,
@@ -300,7 +300,7 @@ export const programarInspeccionRecurrente = async (
       repeticiones
     };
     
-    const response = await axiosInstance.post('/api/mantenimiento/inspecciones/programar-recurrente', data);
+    const response = await axiosInstance.post('/mantenimiento/inspecciones/programar-recurrente', data);
     
     return {
       success: true,
@@ -321,7 +321,7 @@ export const programarInspeccionRecurrente = async (
  */
 export const generarReporteInspeccion = async (id: string): Promise<IAPIResponse<{ url: string }>> => {
   try {
-    const response = await axiosInstance.post(`/api/mantenimiento/inspecciones/${id}/reporte`);
+    const response = await axiosInstance.post(`/mantenimiento/inspecciones/${id}/reporte`);
     
     return {
       success: true,

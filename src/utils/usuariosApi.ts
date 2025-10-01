@@ -38,19 +38,19 @@ const getAuthHeaders = async () => {
 
 // Obtener todos los usuarios
 export const obtenerUsuarios = async (): Promise<IUsuariosResponse> => {
-  const response = await axiosInstance.get('/api/users');
+  const response = await axiosInstance.get('/users');
   return response.data;
 };
 
 // Obtener estadísticas de usuarios
 export const obtenerEstadisticasUsuarios = async (): Promise<IEstadisticasUsuariosResponse> => {
-  const response = await axiosInstance.get('/api/users/stats');
+  const response = await axiosInstance.get('/users/stats');
   return response.data;
 };
 
 // Cambiar rol de usuario (solo administradores)
 export const cambiarRolUsuario = async (request: ICambiarRolRequest): Promise<ICambiarRolResponse> => {
-  const response = await axiosInstance.put(`/api/users/${request.userId}/role`, 
+  const response = await axiosInstance.put(`/users/${request.userId}/role`,
     { newRole: request.newRole }
   );
   return response.data;
@@ -58,6 +58,6 @@ export const cambiarRolUsuario = async (request: ICambiarRolRequest): Promise<IC
 
 // Obtener permisos del usuario actual
 export const obtenerPermisosUsuario = async (): Promise<ICurrentUserResponse> => {
-  const response = await axiosInstance.get('/api/users/me/permissions');
+  const response = await axiosInstance.get('/users/me/permissions');
   return response.data;
 };

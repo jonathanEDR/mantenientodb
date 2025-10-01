@@ -5,6 +5,7 @@ import {
   actualizarEstadoAeronave, 
   actualizarObservacionesAeronave 
 } from '../../utils/inventarioApi';
+import { usePermissions } from '../../hooks/useRoles';
 
 interface GestionHorasAeronaveProps {
   aeronave: IAeronave;
@@ -23,6 +24,7 @@ const GestionHorasAeronave: React.FC<GestionHorasAeronaveProps> = ({
   onActualizado,
   onCerrar
 }) => {
+  const permissions = usePermissions();
   const [formData, setFormData] = useState<FormData>({
     horasAgregadas: 0,
     estado: aeronave.estado as EstadoAeronave,
@@ -127,7 +129,7 @@ const GestionHorasAeronave: React.FC<GestionHorasAeronaveProps> = ({
       <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full mx-4 max-h-screen overflow-y-auto">
         <div className="px-6 py-4 border-b border-gray-200">
           <h3 className="text-lg font-medium text-gray-900">
-            Gestión de Horas - {aeronave.matricula}
+            Horas de Vuelo - {aeronave.matricula}
           </h3>
           <p className="text-sm text-gray-600 mt-1">
             {aeronave.tipo} {aeronave.modelo} - {aeronave.fabricante}
@@ -168,9 +170,10 @@ const GestionHorasAeronave: React.FC<GestionHorasAeronaveProps> = ({
             </div>
           )}
 
-          {/* Sección de Horas de Vuelo */}
-          <div className="bg-blue-50 rounded-lg p-4">
-            <h4 className="text-lg font-medium text-blue-900 mb-4">Actualizar Horas de Vuelo</h4>
+          {/* Sección de Horas de Vuelo - ADMINISTRADOR, MECANICO y COPILOTO */}
+          {(permissions.isAdmin || permissions.isMechanic || permissions.isPilot) && (
+            <div className="bg-blue-50 rounded-lg p-4">
+              <h4 className="text-lg font-medium text-blue-900 mb-4">Actualizar Horas de Vuelo</h4>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div>
@@ -230,9 +233,11 @@ const GestionHorasAeronave: React.FC<GestionHorasAeronaveProps> = ({
                 ⚠️ Se agregarán {formData.horasAgregadas} horas y se propagarán automáticamente a todos los componentes instalados
               </p>
             )}
-          </div>
+            </div>
+          )}
 
-          {/* Sección de Estado */}
+          {/* Sección de Estado - ADMINISTRADOR, MECANICO y COPILOTO */}
+          {(permissions.isAdmin || permissions.isMechanic || permissions.isPilot) && (
           <div className="bg-yellow-50 rounded-lg p-4">
             <h4 className="text-lg font-medium text-yellow-900 mb-4">Actualizar Estado</h4>
             
@@ -274,9 +279,11 @@ const GestionHorasAeronave: React.FC<GestionHorasAeronaveProps> = ({
             >
               {loading ? 'Actualizando...' : 'Actualizar Estado'}
             </button>
-          </div>
+            </div>
+          )}
 
-          {/* Sección de Observaciones */}
+          {/* Sección de Observaciones - ADMINISTRADOR y ESPECIALISTA */}
+          {(permissions.isAdmin || permissions.isSpecialist) && (
           <div className="bg-gray-50 rounded-lg p-4">
             <h4 className="text-lg font-medium text-gray-900 mb-4">Observaciones</h4>
             
@@ -301,9 +308,61 @@ const GestionHorasAeronave: React.FC<GestionHorasAeronaveProps> = ({
             >
               {loading ? 'Actualizando...' : 'Actualizar Observaciones'}
             </button>
-          </div>
+            </div>
+          )}
 
-          {/* Resultado de la propagación */}
+          {/* Mensajes informativos según el rol */}
+          {permissions.isSpecialist && !(permissions.isAdmin) && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start">
+                <svg className="h-5 w-5 text-blue-400 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <h4 className="text-sm font-medium text-blue-800">Acceso de Especialista</h4>
+                  <p className="text-sm text-blue-700 mt-1">
+                    Como especialista, tienes acceso a la gestión de observaciones técnicas de la aeronave.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {(permissions.isMechanic || permissions.isPilot) && !(permissions.isAdmin) && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-start">
+                <svg className="h-5 w-5 text-green-400 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <h4 className="text-sm font-medium text-green-800">
+                    Acceso {permissions.isMechanic ? 'de Mecánico' : 'de Copiloto'}
+                  </h4>
+                  <p className="text-sm text-green-700 mt-1">
+                    Puedes actualizar las horas de vuelo y el estado operativo de la aeronave.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {permissions.isAdmin && (
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+              <div className="flex items-start">
+                <svg className="h-5 w-5 text-purple-400 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                <div>
+                  <h4 className="text-sm font-medium text-purple-800">Acceso de Administrador</h4>
+                  <p className="text-sm text-purple-700 mt-1">
+                    Acceso completo: gestión de horas, estados y observaciones de la aeronave.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Resultado de la propagación - Solo visible si hay resultado */}
           {resultado && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
               <h4 className="text-lg font-medium text-green-900 mb-3">Resultado de la Propagación</h4>

@@ -9,7 +9,7 @@ import {
 // Obtener todos los estados de monitoreo de un componente
 export const obtenerEstadosMonitoreoComponente = async (componenteId: string) => {
   try {
-    const response = await axiosInstance.get(`/api/estados-monitoreo-componente/componente/${componenteId}`);
+    const response = await axiosInstance.get(`/estados-monitoreo-componente/componente/${componenteId}`);
     return {
       success: true,
       data: response.data.data as IEstadoMonitoreoComponente[]
@@ -77,7 +77,7 @@ export const actualizarEstadoMonitoreoComponente = async (
 // Eliminar estado de monitoreo
 export const eliminarEstadoMonitoreoComponente = async (estadoId: string) => {
   try {
-    const response = await axiosInstance.delete(`/api/estados-monitoreo-componente/${estadoId}`);
+    const response = await axiosInstance.delete(`/estados-monitoreo-componente/${estadoId}`);
     return {
       success: true,
       message: response.data.message

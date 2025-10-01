@@ -4,6 +4,7 @@ import { useEstadosMonitoreoComponente } from '../../hooks/useEstadosMonitoreoCo
 import { obtenerColorEstado, obtenerColorCriticidad, formatearFechaMonitoreo } from '../../utils/estadosMonitoreoComponenteApi';
 import ModalEstadoMonitoreo from './ModalEstadoMonitoreo';
 import FiltrosEstadosMonitoreo from './FiltrosEstadosMonitoreo';
+import { usePermissions } from '../../hooks/useRoles';
 
 interface EstadosMonitoreoComponenteProps {
   componenteId: string;
@@ -18,6 +19,7 @@ const EstadosMonitoreoComponente: React.FC<EstadosMonitoreoComponenteProps> = ({
   nombreComponente,
   className = ''
 }) => {
+  const permissions = usePermissions();
   const {
     estadosFiltrados,
     loading,
@@ -132,15 +134,18 @@ const EstadosMonitoreoComponente: React.FC<EstadosMonitoreoComponenteProps> = ({
           </svg>
           Actualizar
         </button>
-        <button
-          onClick={handleCrearEstado}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-        >
-          <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
-          Agregar Estado
-        </button>
+        {/* Botón Agregar Estado - Solo ADMINISTRADOR y MECANICO */}
+        {(permissions.isAdmin || permissions.isMechanic) && (
+          <button
+            onClick={handleCrearEstado}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+          >
+            <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            Agregar Estado
+          </button>
+        )}
       </div>
     </div>
   );
@@ -226,18 +231,30 @@ const EstadosMonitoreoComponente: React.FC<EstadosMonitoreoComponenteProps> = ({
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                    <button
-                      onClick={() => handleEditarEstado(estado)}
-                      className="text-blue-600 hover:text-blue-900 transition-colors"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => handleEliminarEstado(estado._id)}
-                      className="text-red-600 hover:text-red-900 transition-colors"
-                    >
-                      Eliminar
-                    </button>
+                    {/* Botón Editar - Solo ADMINISTRADOR y MECANICO */}
+                    {(permissions.isAdmin || permissions.isMechanic) && (
+                      <button
+                        onClick={() => handleEditarEstado(estado)}
+                        className="text-blue-600 hover:text-blue-900 transition-colors"
+                      >
+                        Editar
+                      </button>
+                    )}
+                    
+                    {/* Botón Eliminar - Solo ADMINISTRADOR */}
+                    {permissions.isAdmin && (
+                      <button
+                        onClick={() => handleEliminarEstado(estado._id)}
+                        className="text-red-600 hover:text-red-900 transition-colors"
+                      >
+                        Eliminar
+                      </button>
+                    )}
+
+                    {/* Mensaje para roles sin permisos */}
+                    {!permissions.isAdmin && !permissions.isMechanic && (
+                      <span className="text-gray-500 text-xs italic">Solo visualización</span>
+                    )}
                   </td>
                 </tr>
               );

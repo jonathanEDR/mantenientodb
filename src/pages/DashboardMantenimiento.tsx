@@ -161,7 +161,7 @@ const DashboardMantenimiento: React.FC = () => {
               </div>
               <div className="ml-4">
                 <h3 className="text-lg font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
-                  Gestión de Componentes
+                  Componentes
                 </h3>
                 <p className="text-sm text-gray-500">
                   Administrar componentes de aeronaves, inspecciones y alertas
@@ -198,7 +198,7 @@ const DashboardMantenimiento: React.FC = () => {
                   Órdenes de Trabajo
                 </h3>
                 <p className="text-sm text-gray-500">
-                  Gestionar órdenes de mantenimiento y seguimiento de trabajos
+                  Órdenes de mantenimiento y seguimiento de trabajos
                 </p>
               </div>
             </div>

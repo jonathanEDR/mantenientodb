@@ -177,7 +177,7 @@ const GestionPersonal: React.FC = () => {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Gestión de Personal</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Personal</h1>
               <p className="text-gray-600 mt-1">Administra los usuarios registrados en el sistema</p>
             </div>
             <button
