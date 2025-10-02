@@ -84,6 +84,42 @@ export const obtenerEstadosMonitoreoPorAeronave = async (aeronaveId: string) => 
   }
 };
 
+// ✅ OPTIMIZADO: Usar el nuevo endpoint backend que obtiene componentes + estados en 2 queries
+export const obtenerComponentesConEstadosPorAeronave = async (aeronaveId: string) => {
+  try {
+    console.log(`🚀 [OPTIMIZADO] Usando endpoint /con-estados para aeronave ${aeronaveId}`);
+
+    const response = await axiosInstance.get(
+      `/mantenimiento/componentes/aeronave/id/${aeronaveId}/con-estados`
+    );
+
+    if (!response.data.success) {
+      return {
+        success: false,
+        error: 'Error al obtener componentes con estados',
+        data: {},
+        componentes: []
+      };
+    }
+
+    console.log(`✅ [OPTIMIZADO] Cargados ${response.data.total} componentes con ${response.data.estadosTotal} estados en 2 queries`);
+
+    return {
+      success: true,
+      data: response.data.estadosMap, // Mapa de componenteId -> estados
+      componentes: response.data.data // Array de componentes
+    };
+  } catch (error: any) {
+    console.error('Error al obtener componentes con estados:', error);
+    return {
+      success: false,
+      error: error.response?.data?.message || 'Error al obtener componentes con estados',
+      data: {},
+      componentes: []
+    };
+  }
+};
+
 // Crear nuevo estado de monitoreo para un componente
 export const crearEstadoMonitoreoComponente = async (
   componenteId: string,

@@ -4,11 +4,16 @@ import App from './App';
 import './index.css';
 import { ClerkProvider } from '@clerk/clerk-react';
 import ConfigError from './components/common/ConfigError';
+import { registerServiceWorker, setupOnlineDetection } from './utils/registerServiceWorker';
 
 // Importar debugging solo en desarrollo
 if ((import.meta as any).env.DEV) {
   import('./utils/debug');
 }
+
+// Registrar Service Worker para caché offline
+registerServiceWorker();
+setupOnlineDetection();
 
 // Validación mejorada de variables de entorno
 const PUBLISHABLE_KEY = (import.meta as any).env.VITE_CLERK_PUBLISHABLE_KEY;
