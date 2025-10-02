@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { IComponente } from '../../../types/mantenimiento';
 import { IAeronave } from '../../../types/inventario';
 import MantenimientoTable from '../shared/MantenimientoTable';
@@ -23,6 +23,19 @@ export default function ComponentesTable({
   onViewDetails,
   onViewMonitoreo
 }: ComponentesTableProps) {
+  // Estado para paginación
+  const [paginaActual, setPaginaActual] = useState(1);
+  const componentesPorPagina = 3;
+
+  // Calcular componentes paginados
+  const componentesPaginados = useMemo(() => {
+    const inicio = (paginaActual - 1) * componentesPorPagina;
+    const fin = inicio + componentesPorPagina;
+    return componentes.slice(inicio, fin);
+  }, [componentes, paginaActual]);
+
+  const totalPaginas = Math.ceil(componentes.length / componentesPorPagina);
+
   const obtenerNombreAeronave = (aeronaveActual?: string | IAeronave) => {
     if (!aeronaveActual) return 'No asignada';
     
@@ -120,10 +133,10 @@ export default function ComponentesTable({
             <button
               onClick={() => onViewMonitoreo(record)}
               className="inline-flex items-center px-3 py-1 bg-green-600 text-white text-xs font-medium rounded-md hover:bg-green-700 transition-colors"
-              title="Gestionar estados de monitoreo"
+              title="Gestionar estados de monitoreo (carga bajo demanda)"
             >
               <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
               Monitoreo
             </button>
@@ -134,13 +147,63 @@ export default function ComponentesTable({
   ];
 
   return (
-    <MantenimientoTable
-      columns={columns}
-      data={componentes}
-      loading={loading}
-      emptyMessage="No se encontraron componentes"
-      onEdit={onEdit}
-      onDelete={onDelete}
-    />
+    <div className="space-y-4">
+      <MantenimientoTable
+        columns={columns}
+        data={componentesPaginados}
+        loading={loading}
+        emptyMessage="No se encontraron componentes"
+        onEdit={onEdit}
+        onDelete={onDelete}
+      />
+      
+      {/* Controles de paginación */}
+      {totalPaginas > 1 && (
+        <div className="flex items-center justify-between bg-white px-4 py-3 border-t border-gray-200">
+          <div className="flex items-center text-sm text-gray-700">
+            <span>
+              Mostrando{' '}
+              <span className="font-medium">
+                {(paginaActual - 1) * componentesPorPagina + 1}
+              </span>{' '}
+              al{' '}
+              <span className="font-medium">
+                {Math.min(paginaActual * componentesPorPagina, componentes.length)}
+              </span>{' '}
+              de{' '}
+              <span className="font-medium">{componentes.length}</span> componentes
+            </span>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setPaginaActual(prev => Math.max(prev - 1, 1))}
+              disabled={paginaActual === 1}
+              className="relative inline-flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Anterior
+            </button>
+            
+            <span className="text-sm text-gray-700">
+              Página {paginaActual} de {totalPaginas}
+            </span>
+            
+            <button
+              onClick={() => setPaginaActual(prev => Math.min(prev + 1, totalPaginas))}
+              disabled={paginaActual === totalPaginas}
+              className="relative inline-flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Siguiente
+              <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

@@ -45,6 +45,10 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
   const [selectedEstado, setSelectedEstado] = useState<EstadoComponente | ''>('');
   const [selectedCategoria, setSelectedCategoria] = useState<ComponenteCategoria | ''>('');
 
+  // 📄 Estado de paginación (limitamos a 3 componentes por página para optimizar rendimiento)
+  const [paginaActual, setPaginaActual] = useState(1);
+  const componentesPorPagina = 3;
+
   // Evitar fetch si ya tenemos componentes cargados
   const componentesYaCargados = useRef(false);
 
@@ -55,9 +59,15 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
     }
   }, [isOpen, aeronave._id]); // ✅ Solo cargar la primera vez que se abre
 
+  // Filtrar componentes cuando cambien filtros, componentes o página
   useEffect(() => {
     filtrarComponentes();
-  }, [componentes, searchTerm, selectedEstado, selectedCategoria]);
+  }, [componentes, searchTerm, selectedEstado, selectedCategoria, paginaActual]);
+  
+  // Resetear página a 1 cuando cambien los filtros
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [searchTerm, selectedEstado, selectedCategoria]);
 
   const cargarComponentes = async () => {
     setLoading(true);
@@ -121,7 +131,20 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
       filtered = filtered.filter(comp => comp.categoria === selectedCategoria);
     }
 
-    setFilteredComponentes(filtered);
+    // 📄 Aplicar paginación (solo mostrar 3 componentes por página)
+    const inicio = (paginaActual - 1) * componentesPorPagina;
+    const fin = inicio + componentesPorPagina;
+    const componentesPaginados = filtered.slice(inicio, fin);
+    
+    console.log(`📋 [PAGINACIÓN] Página ${paginaActual}: mostrando ${componentesPaginados.length} de ${filtered.length} componentes`);
+    
+    setFilteredComponentes(componentesPaginados);
+    
+    // Resetear página si nos quedamos sin datos
+    const totalPaginas = Math.ceil(filtered.length / componentesPorPagina);
+    if (paginaActual > totalPaginas && totalPaginas > 0) {
+      setPaginaActual(1);
+    }
   };
 
   const handleNuevoComponente = () => {
@@ -566,6 +589,92 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
                   />
                 ))}
               </div>
+              
+              {/* 📄 Controles de Paginación */}
+              {(() => {
+                // Calcular datos de paginación basados en componentes SIN filtro de paginación
+                let totalFiltrados = [...componentes];
+                
+                if (searchTerm) {
+                  totalFiltrados = totalFiltrados.filter(comp => 
+                    comp.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    comp.numeroSerie.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    comp.numeroParte.toLowerCase().includes(searchTerm.toLowerCase())
+                  );
+                }
+                
+                if (selectedEstado) {
+                  totalFiltrados = totalFiltrados.filter(comp => comp.estado === selectedEstado);
+                }
+                
+                if (selectedCategoria) {
+                  totalFiltrados = totalFiltrados.filter(comp => comp.categoria === selectedCategoria);
+                }
+                
+                const totalPaginas = Math.ceil(totalFiltrados.length / componentesPorPagina);
+                
+                if (totalPaginas <= 1) return null;
+                
+                return (
+                  <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
+                    <div className="flex items-center text-sm text-gray-700">
+                      <span>
+                        Mostrando {((paginaActual - 1) * componentesPorPagina) + 1} - {Math.min(paginaActual * componentesPorPagina, totalFiltrados.length)} de {totalFiltrados.length} componentes
+                      </span>
+                      <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                        📄 Optimizado: 3 por página
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => setPaginaActual(prev => Math.max(1, prev - 1))}
+                        disabled={paginaActual === 1}
+                        className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        ← Anterior
+                      </button>
+                      
+                      <div className="flex items-center space-x-1">
+                        {Array.from({ length: Math.min(5, totalPaginas) }, (_, i) => {
+                          let pageNumber;
+                          if (totalPaginas <= 5) {
+                            pageNumber = i + 1;
+                          } else if (paginaActual <= 3) {
+                            pageNumber = i + 1;
+                          } else if (paginaActual >= totalPaginas - 2) {
+                            pageNumber = totalPaginas - 4 + i;
+                          } else {
+                            pageNumber = paginaActual - 2 + i;
+                          }
+                          
+                          return (
+                            <button
+                              key={pageNumber}
+                              onClick={() => setPaginaActual(pageNumber)}
+                              className={`px-3 py-1 text-sm rounded-md ${
+                                paginaActual === pageNumber
+                                  ? 'bg-blue-600 text-white'
+                                  : 'border border-gray-300 hover:bg-gray-50'
+                              }`}
+                            >
+                              {pageNumber}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      
+                      <button
+                        onClick={() => setPaginaActual(prev => Math.min(totalPaginas, prev + 1))}
+                        disabled={paginaActual === totalPaginas}
+                        className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Siguiente →
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>
@@ -618,6 +727,33 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
               </h2>
               <p className="text-blue-200 text-sm">
                 {aeronave.tipo} - {aeronave.modelo}
+                {(() => {
+                  let totalFiltrados = [...componentes];
+                  
+                  if (searchTerm) {
+                    totalFiltrados = totalFiltrados.filter(comp => 
+                      comp.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      comp.numeroSerie.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      comp.numeroParte.toLowerCase().includes(searchTerm.toLowerCase())
+                    );
+                  }
+                  
+                  if (selectedEstado) {
+                    totalFiltrados = totalFiltrados.filter(comp => comp.estado === selectedEstado);
+                  }
+                  
+                  if (selectedCategoria) {
+                    totalFiltrados = totalFiltrados.filter(comp => comp.categoria === selectedCategoria);
+                  }
+                  
+                  if (totalFiltrados.length === 0) return '';
+                  
+                  const totalPaginas = Math.ceil(totalFiltrados.length / componentesPorPagina);
+                  
+                  return totalFiltrados.length !== componentes.length 
+                    ? ` • ${totalFiltrados.length} de ${componentes.length} componentes${totalPaginas > 1 ? ` • Página ${paginaActual}/${totalPaginas}` : ''}`
+                    : ` • ${componentes.length} componentes${totalPaginas > 1 ? ` • Página ${paginaActual}/${totalPaginas}` : ''}`;
+                })()}
               </p>
             </div>
           </div>

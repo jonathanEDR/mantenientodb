@@ -3,6 +3,16 @@
  */
 
 export function registerServiceWorker() {
+  // DESACTIVADO EN DESARROLLO para evitar cache de archivos viejos
+  if (import.meta.env.DEV) {
+    console.log('⚠️ Service Worker desactivado en modo desarrollo');
+    // Desregistrar cualquier SW existente en desarrollo
+    unregisterServiceWorker().then(() => {
+      console.log('🗑️ Service Worker removido en desarrollo');
+    });
+    return;
+  }
+
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker

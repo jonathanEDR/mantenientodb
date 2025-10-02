@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { useUser, useAuth } from '@clerk/clerk-react';
+import { useUser } from '@clerk/clerk-react';
 import axiosInstance from '../utils/axiosConfig';
 import DashboardLayout from '../components/layout/DashboardLayout';
+import TokenRefreshButton from '../components/common/TokenRefreshButton';
 
 export default function Dashboard() {
   const { user, isLoaded } = useUser();
-  const { getToken } = useAuth();
   const [dbUser, setDbUser] = useState<any>(null);
   const [isRegistering, setIsRegistering] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -17,28 +17,9 @@ export default function Dashboard() {
       try {
         setError(null);
 
-        // Obtener token de Clerk
-        const token = await getToken();
-        // DEBUG: mostrar preview seguro del token para verificar su forma (no imprimir entero en prod)
-        try {
-          const preview = token ? `${String(token).slice(0, 12)}...${String(token).slice(-12)}` : token;
-          const segments = token ? String(token).split('.')?.length : 0;
-          // eslint-disable-next-line no-console
-          console.log('[DEBUG] clerk token preview:', preview, 'segments:', segments);
-        } catch (e) {
-          // ignore
-        }
-        if (!token) {
-          setError('No se pudo obtener el token de autenticación');
-          return;
-        }
-
         // Verificar si el usuario ya está en la BD
-        const response = await axiosInstance.get('/auth/me', {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
+        // El token se agrega automáticamente por el interceptor de axios
+        const response = await axiosInstance.get('/auth/me');
 
         setDbUser(response.data.user);
         console.log('Usuario encontrado en BD:', response.data.user);
@@ -102,6 +83,9 @@ export default function Dashboard() {
         {error && (
           <div className="mb-4 p-4 bg-red-100 text-red-700 rounded">⚠️ Error: {error}</div>
         )}
+
+        {/* Herramientas de debug para autenticación */}
+        <TokenRefreshButton className="mb-4" />
 
         <div className="space-y-2 mb-6">
           <p><strong>Email:</strong> {user?.primaryEmailAddress?.emailAddress}</p>

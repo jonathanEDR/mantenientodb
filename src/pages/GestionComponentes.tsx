@@ -8,20 +8,36 @@ import {
 } from '../components/mantenimiento';
 import HistorialComponente from '../components/mantenimiento/componentes/HistorialComponente';
 import EstadosMonitoreoComponente from '../components/mantenimiento/EstadosMonitoreoComponente';
-import { useMantenimiento, useModal } from '../hooks';
+import { useModal } from '../hooks';
+import { useComponentes, useCrearComponente, useActualizarComponente, useEliminarComponente } from '../hooks/queries/useMantenimientoQuery';
+import { obtenerAeronaves } from '../utils/inventarioApi';
+import { useQuery } from '@tanstack/react-query';
 
 export default function GestionComponentes() {
-  const {
-    componentes,
-    aeronaves,
-    loading,
-    error,
-    crearNuevoComponente,
-    actualizarComponenteExistente,
-    actualizarComponenteDesdeHistorial,
-    eliminarComponenteExistente,
-    obtenerAeronaveNombre
-  } = useMantenimiento();
+  // Hooks de React Query para datos
+  const { data: componentes = [], isLoading: loadingComponentes, error: errorComponentes } = useComponentes();
+  const { data: aeronaves = [], isLoading: loadingAeronaves } = useQuery({
+    queryKey: ['aeronaves'],
+    queryFn: async () => {
+      const response = await obtenerAeronaves();
+      return response.success ? response.data : [];
+    },
+  });
+
+  // Mutations de React Query
+  const crearMutation = useCrearComponente();
+  const actualizarMutation = useActualizarComponente();
+  const eliminarMutation = useEliminarComponente();
+
+  // Estados derivados
+  const loading = loadingComponentes || loadingAeronaves;
+  const error = errorComponentes ? 'Error al cargar componentes' : null;
+
+  // Función auxiliar para obtener nombre de aeronave
+  const obtenerAeronaveNombre = (aeronaveId: string): string => {
+    const aeronave = aeronaves.find(a => a._id === aeronaveId);
+    return aeronave ? `${aeronave.matricula} - ${aeronave.modelo}` : 'N/A';
+  };
 
   const {
     isOpen: modalAbierto,
@@ -47,7 +63,7 @@ export default function GestionComponentes() {
 
   // Filtrar componentes localmente
   const componentesFiltrados = React.useMemo(() => {
-    return componentes.filter(componente => {
+    return componentes.filter((componente: IComponente) => {
       const pasaCategoria = !filtroCategoria || componente.categoria === filtroCategoria;
       const pasaEstado = !filtroEstado || componente.estado === filtroEstado;
       const pasaBusqueda = !filtroBusqueda || 
@@ -64,9 +80,12 @@ export default function GestionComponentes() {
       setModalLoading(true);
       
       if (componenteEditando) {
-        await actualizarComponenteExistente(componenteEditando._id!, componenteData);
+        await actualizarMutation.mutateAsync({
+          id: componenteEditando._id!,
+          data: componenteData
+        });
       } else {
-        await crearNuevoComponente(componenteData);
+        await crearMutation.mutateAsync(componenteData);
       }
       
       cerrarModal();
@@ -78,7 +97,9 @@ export default function GestionComponentes() {
   };
 
   const manejarEliminar = async (componente: IComponente) => {
-    await eliminarComponenteExistente(componente);
+    if (componente._id) {
+      await eliminarMutation.mutateAsync(componente._id);
+    }
   };
 
   const manejarVerDetalles = (componente: IComponente) => {
@@ -103,7 +124,7 @@ export default function GestionComponentes() {
 
   const manejarActualizacionHistorial = async (componenteId: string, data: any) => {
     try {
-      await actualizarComponenteDesdeHistorial(componenteId, data);
+      await actualizarMutation.mutateAsync({ id: componenteId, data });
       // Actualizar el componente en el estado local
       if (componenteHistorial) {
         const componenteActualizado = { ...componenteHistorial, ...data };
@@ -141,9 +162,17 @@ export default function GestionComponentes() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-semibold text-gray-900">
-            Gestión de Componentes
-          </h1>
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">
+              Gestión de Componentes
+            </h1>
+            <p className="text-sm text-gray-600 mt-1">
+              Total: {componentesFiltrados.length} componentes 
+              {componentesFiltrados.length !== componentes.length && 
+                ` (filtrados de ${componentes.length})`
+              } • Mostrando 3 por página para optimizar rendimiento
+            </p>
+          </div>
           <button
             onClick={() => abrirModal()}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center gap-2"
@@ -195,7 +224,7 @@ export default function GestionComponentes() {
           />
         )}
 
-        {/* Módulo de Monitoreo */}
+        {/* Módulo de Monitoreo - LAZY LOADING */}
         {monitoreoAbierto && componenteMonitoreo && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-7xl max-h-[95vh] overflow-hidden">
@@ -215,6 +244,9 @@ export default function GestionComponentes() {
                       return obtenerAeronaveNombre(aeronaveActual);
                     })()}
                   </p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    ⚡ Carga bajo demanda - Los estados se cargan solo cuando se necesitan
+                  </p>
                 </div>
                 <button
                   onClick={cerrarMonitoreo}
@@ -226,6 +258,7 @@ export default function GestionComponentes() {
                 </button>
               </div>
               <div className="overflow-auto" style={{ maxHeight: 'calc(95vh - 80px)' }}>
+                {/* Solo renderizar cuando el modal está abierto (lazy loading) */}
                 <EstadosMonitoreoComponente
                   componenteId={componenteMonitoreo._id!}
                   numeroSerie={componenteMonitoreo.numeroSerie}

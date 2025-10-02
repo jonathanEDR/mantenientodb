@@ -6,9 +6,10 @@ import { ClerkProvider } from '@clerk/clerk-react';
 import ConfigError from './components/common/ConfigError';
 import { registerServiceWorker, setupOnlineDetection } from './utils/registerServiceWorker';
 
-// Importar debugging solo en desarrollo
+// Importar debugging y diagnósticos solo en desarrollo
 if ((import.meta as any).env.DEV) {
   import('./utils/debug');
+  import('./utils/diagnosticManager');
 }
 
 // Registrar Service Worker para caché offline
@@ -59,7 +60,22 @@ if (configError) {
 } else {
   createRoot(rootEl).render(
     <React.StrictMode>
-      <ClerkProvider publishableKey={PUBLISHABLE_KEY} afterSignOutUrl="/">
+      <ClerkProvider
+        publishableKey={PUBLISHABLE_KEY}
+        afterSignOutUrl="/"
+        tokenCache={{
+          getToken: async (key: string) => {
+            const token = sessionStorage.getItem(key);
+            return token;
+          },
+          setToken: async (key: string, token: string) => {
+            sessionStorage.setItem(key, token);
+          },
+          removeToken: async (key: string) => {
+            sessionStorage.removeItem(key);
+          },
+        }}
+      >
         <App />
       </ClerkProvider>
     </React.StrictMode>
