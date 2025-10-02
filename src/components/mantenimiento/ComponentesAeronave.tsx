@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import HistorialComponente from './componentes/HistorialComponente';
 import ComponenteModal from './componentes/ComponenteModal';
 import ResumenMonitoreoComponente from './componentes/ResumenMonitoreoComponente';
@@ -41,11 +41,15 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
   const [selectedEstado, setSelectedEstado] = useState<EstadoComponente | ''>('');
   const [selectedCategoria, setSelectedCategoria] = useState<ComponenteCategoria | ''>('');
 
+  // Evitar fetch si ya tenemos componentes cargados
+  const componentesYaCargados = useRef(false);
+
   useEffect(() => {
-    if (isOpen && aeronave._id) {
+    if (isOpen && aeronave._id && !componentesYaCargados.current) {
       cargarComponentes();
+      componentesYaCargados.current = true;
     }
-  }, [isOpen, aeronave._id]);
+  }, [isOpen, aeronave._id]); // ✅ Solo cargar la primera vez que se abre
 
   useEffect(() => {
     filtrarComponentes();
@@ -163,6 +167,7 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
         await axiosInstance.post('/mantenimiento/componentes', dataToSend);
       }
       
+      componentesYaCargados.current = false; // Forzar recarga
       await cargarComponentes();
       cerrarModalComponente();
     } catch (error: any) {
@@ -208,6 +213,7 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
 
     try {
       await axiosInstance.delete(`/mantenimiento/componentes/${id}`);
+      componentesYaCargados.current = false; // Forzar recarga
       await cargarComponentes();
     } catch (error: any) {
       console.error('Error al eliminar componente:', error);

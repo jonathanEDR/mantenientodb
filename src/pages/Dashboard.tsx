@@ -76,7 +76,7 @@ export default function Dashboard() {
     };
 
     registerUserInDB();
-  }, [user, isLoaded, getToken]);
+  }, [user?.id, isLoaded]); // ✅ Solo depender de user.id, no de getToken
 
   if (!isLoaded) {
     return (

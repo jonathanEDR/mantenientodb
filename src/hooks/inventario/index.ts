@@ -1,28 +1,44 @@
-import { useState, useEffect } from 'react';
-import { 
-  IAeronave, 
-  IEstadisticasInventario, 
+import { useState, useEffect, useRef } from 'react';
+import {
+  IAeronave,
+  IEstadisticasInventario,
   ICrearAeronaveData,
   IAeronavesResponse,
-  IEstadisticasInventarioResponse 
+  IEstadisticasInventarioResponse
 } from '../../types/inventario';
-import { 
-  obtenerAeronaves, 
-  obtenerEstadisticasInventario, 
-  crearAeronave, 
-  actualizarAeronave, 
-  eliminarAeronave 
+import {
+  obtenerAeronaves,
+  obtenerEstadisticasInventario,
+  crearAeronave,
+  actualizarAeronave,
+  eliminarAeronave
 } from '../../utils/inventarioApi';
+
+// Cache global simple para evitar múltiples fetches
+let inventarioCacheData: { aeronaves: IAeronave[]; estadisticas: IEstadisticasInventario | null } | null = null;
+let inventarioCacheTimestamp = 0;
+const CACHE_TTL = 30000; // 30 segundos
 
 export const useInventario = () => {
   const [aeronaves, setAeronaves] = useState<IAeronave[]>([]);
   const [estadisticas, setEstadisticas] = useState<IEstadisticasInventario | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const isMountedRef = useRef(true);
 
   // Función para cargar datos
   const cargarDatos = async () => {
     try {
+      // Verificar cache
+      const now = Date.now();
+      if (inventarioCacheData && (now - inventarioCacheTimestamp) < CACHE_TTL) {
+        console.log('📦 [useInventario] Usando datos del caché');
+        setAeronaves(inventarioCacheData.aeronaves);
+        setEstadisticas(inventarioCacheData.estadisticas);
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       setError(null);
 
@@ -32,6 +48,8 @@ export const useInventario = () => {
         obtenerEstadisticasInventario()
       ]);
 
+      if (!isMountedRef.current) return; // Evitar actualizar si se desmontó
+
       if (responseAeronaves.success) {
         setAeronaves(responseAeronaves.data);
       }
@@ -40,17 +58,34 @@ export const useInventario = () => {
         setEstadisticas(responseEstadisticas.data);
       }
 
+      // Actualizar caché
+      inventarioCacheData = {
+        aeronaves: responseAeronaves.data,
+        estadisticas: responseEstadisticas.data
+      };
+      inventarioCacheTimestamp = Date.now();
+      console.log('💾 [useInventario] Datos guardados en caché');
+
     } catch (err) {
       console.error('Error al cargar datos:', err);
-      setError('Error al cargar los datos de inventario');
+      if (isMountedRef.current) {
+        setError('Error al cargar los datos de inventario');
+      }
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
   };
 
   // Cargar datos al montar el hook
   useEffect(() => {
+    isMountedRef.current = true;
     cargarDatos();
+
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
   return {
@@ -138,6 +173,8 @@ export const useFormularioAeronave = (onSuccess: () => void) => {
           setMostrarFormulario(false);
           setAeronaveEditando(null);
           resetearFormulario();
+          // Invalidar caché
+          inventarioCacheTimestamp = 0;
           onSuccess();
         }
       } else {
@@ -147,6 +184,8 @@ export const useFormularioAeronave = (onSuccess: () => void) => {
           alert('Aeronave creada exitosamente');
           setMostrarFormulario(false);
           resetearFormulario();
+          // Invalidar caché
+          inventarioCacheTimestamp = 0;
           onSuccess();
         }
       }

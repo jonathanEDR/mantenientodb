@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMonitoreoFlota } from '../hooks/monitoreo';
+import { useDebounce } from '../hooks/useDebounce';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { EstadoMonitoreoPreview, AlertaMonitoreo } from '../components/monitoreo';
-import { 
-  EstadoAlerta, 
-  TipoAlerta, 
+import {
+  EstadoAlerta,
+  TipoAlerta,
   IResumenMonitoreoAeronave,
   IAlertaMonitoreo
 } from '../types/monitoreo';
@@ -61,28 +62,31 @@ const MonitoreoFlota: React.FC = () => {
   const [mostrarDetalleAlerta, setMostrarDetalleAlerta] = useState<IAlertaMonitoreo | null>(null);
   const [vistaActual, setVistaActual] = useState<'tarjetas' | 'lista'>('tarjetas');
 
+  // Aplicar debounce a búsqueda para evitar múltiples llamadas
+  const debouncedBusqueda = useDebounce(filtros.busqueda, 300);
+
   // Aplicar filtros cuando cambien
-  useMemo(() => {
+  useEffect(() => {
     aplicarFiltros({
       soloConAlertas: filtros.soloConAlertas,
       estadosPermitidos: filtros.estadosSeleccionados.length > 0 ? filtros.estadosSeleccionados : undefined,
       tiposAlertaPermitidos: filtros.tiposAlertaSeleccionados.length > 0 ? filtros.tiposAlertaSeleccionados : undefined
     });
-  }, [filtros, aplicarFiltros]);
+  }, [filtros.soloConAlertas, filtros.estadosSeleccionados, filtros.tiposAlertaSeleccionados, aplicarFiltros]); // ✅ useEffect en lugar de useMemo
 
-  // Filtrar y ordenar aeronaves
+  // Filtrar y ordenar aeronaves con búsqueda debounced
   const aeronavesProcessadas = useMemo(() => {
     let aeronaves = obtenerAeronavesOrdenadas(filtros.ordenPor);
 
-    // Filtro por búsqueda
-    if (filtros.busqueda) {
+    // Filtro por búsqueda (usando debounce)
+    if (debouncedBusqueda) {
       aeronaves = aeronaves.filter(aeronave =>
-        aeronave.matricula.toLowerCase().includes(filtros.busqueda.toLowerCase())
+        aeronave.matricula.toLowerCase().includes(debouncedBusqueda.toLowerCase())
       );
     }
 
     return aeronaves;
-  }, [aeronavesFiltrasdas, filtros, obtenerAeronavesOrdenadas]);
+  }, [aeronavesFiltrasdas, debouncedBusqueda, filtros.ordenPor, obtenerAeronavesOrdenadas]); // ✅ Usar debouncedBusqueda
 
   // Función para exportar datos
   const handleExportarCSV = () => {

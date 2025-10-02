@@ -39,16 +39,16 @@ export const useMantenimiento = (): UseMantenimientoReturn => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const [componentesResponse, aeronavesResponse] = await Promise.all([
         obtenerComponentes(),
         obtenerAeronaves()
       ]);
-      
+
       // Extraer los datos de ambas respuestas
       const componentesData = componentesResponse?.data || [];
       const aeronavesData = aeronavesResponse?.data || [];
-      
+
       setComponentes(Array.isArray(componentesData) ? componentesData : []);
       setAeronaves(Array.isArray(aeronavesData) ? aeronavesData : []);
     } catch (err) {
@@ -60,7 +60,7 @@ export const useMantenimiento = (): UseMantenimientoReturn => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, []); // ✅ Array vacío - función estable
 
   const crearNuevoComponente = useCallback(async (componenteData: Partial<IComponente>) => {
     try {
@@ -148,7 +148,7 @@ export const useMantenimiento = (): UseMantenimientoReturn => {
 
   useEffect(() => {
     cargarDatos();
-  }, [cargarDatos]);
+  }, []); // ✅ Solo ejecutar una vez al montar
 
   return {
     // Estado
