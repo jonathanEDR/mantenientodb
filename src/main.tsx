@@ -68,6 +68,10 @@ if (configError) {
         <ClerkProvider
           publishableKey={PUBLISHABLE_KEY}
           afterSignOutUrl="/"
+          signInUrl="/sign-in"
+          signUpUrl="/sign-up"
+          afterSignInUrl="/dashboard"
+          afterSignUpUrl="/dashboard"
         >
           <App />
           <Toaster
