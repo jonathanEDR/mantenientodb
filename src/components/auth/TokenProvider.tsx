@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
 import { useAuth, useClerk } from '@clerk/clerk-react';
-import { setTokenGetter } from '../../utils/axiosConfig';
+import { configureTokenSystem } from '../../utils/axiosConfig';
+import { nuclearCacheCleanup, checkForExpiredTokens } from '../../utils/cacheCleanup';
+import { UserCacheDiagnostics } from '../../utils/userCacheDiagnostics';
 
 interface TokenProviderProps {
   children: React.ReactNode;
@@ -11,81 +13,79 @@ export default function TokenProvider({ children }: TokenProviderProps) {
   const clerk = useClerk();
 
   useEffect(() => {
-    if (!isLoaded) return; // Esperar a que Clerk se cargue
+    if (!isLoaded) return;
 
-    // Configurar el token getter en la instancia de axios
-    const tokenGetter = async (options?: { skipCache?: boolean }): Promise<string | null> => {
+    // Verificar y limpiar tokens expirados silenciosamente
+    const foundExpiredTokens = checkForExpiredTokens();
+    if (foundExpiredTokens) {
+      // Limpieza automática sin logs molestos
+      nuclearCacheCleanup(clerk).then(() => {
+        window.location.reload();
+      });
+      return;
+    }
+
+    // ✅ Sistema optimizado de obtención de tokens
+    const getTokenSimple = async (): Promise<string | null> => {
       if (!isSignedIn) {
-        console.warn('🔐 Usuario no autenticado - redirigiendo a login');
-        // Si no está autenticado, forzar redirect a login
-        window.location.href = '/sign-in';
         return null;
       }
 
       try {
-        const skipCache = options?.skipCache !== false; // Default true
-        console.log(`🔄 Solicitando token ${skipCache ? 'fresco (skipCache)' : 'con cache'}...`);
-
-        // Obtener token con skipCache controlable
-        const token = await getToken({
-          skipCache, // Usar el parámetro pasado
-          template: undefined // Usar template por defecto
+        // Obtener token fresco para evitar cache issues
+        const token = await getToken({ 
+          skipCache: true,
+          template: undefined 
         });
-
-        if (token) {
-          // Verificar que el token no esté expirado
-          try {
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            const now = Math.floor(Date.now() / 1000);
-            const exp = payload.exp;
-
-            if (exp && exp > now) {
-              const ttl = exp - now;
-              console.log(`✅ Token válido (TTL: ${ttl}s, expira: ${new Date(exp * 1000).toLocaleTimeString()})`);
-              return token;
-            } else {
-              console.error('⚠️ Token expirado recibido de Clerk - sesión completamente expirada');
-              console.error('🔒 Forzando logout y redirect a login...');
-
-              // Limpiar sesión y redirigir
-              await clerk.signOut();
-              sessionStorage.clear();
-              localStorage.removeItem('clerk-db-jwt');
-              window.location.href = '/sign-in';
-              return null;
-            }
-          } catch (parseError) {
-            console.warn('⚠️ No se pudo verificar expiración del token, usando de todas formas');
-            return token;
-          }
-        } else {
-          console.error('❌ Clerk no pudo proveer un token - sesión expirada');
-          console.error('🔒 Forzando logout y redirect a login...');
-
-          // Limpiar sesión y redirigir
-          await clerk.signOut();
-          sessionStorage.clear();
-          localStorage.removeItem('clerk-db-jwt');
-          window.location.href = '/sign-in';
-          return null;
+        
+        if (!token) {
+          throw new Error('Token null de Clerk');
         }
-      } catch (error) {
-        console.error('💥 Error crítico obteniendo token:', error);
 
-        // Si hay un error crítico, también hacer logout
+        // Validación de expiración
         try {
-          await clerk.signOut();
-        } catch (e) {
-          // Ignorar errores de logout
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          const now = Math.floor(Date.now() / 1000);
+          const exp = payload.exp;
+          
+          if (!exp) {
+            return token; // Token sin expiración
+          }
+
+          // Verificar si está expirado
+          if (exp <= now) {
+            // Token expirado - ejecutar limpieza automática
+            try {
+              await nuclearCacheCleanup(clerk);
+            } catch (cleanupError) {
+              // Ignorar errores de limpieza
+            }
+            window.location.href = '/sign-in';
+            return null;
+          }
+
+          return token;
+
+        } catch (parseError) {
+          // Si no se puede parsear, usar de todas formas
+          return token;
         }
-        sessionStorage.clear();
-        localStorage.removeItem('clerk-db-jwt');
+        
+      } catch (error) {
+        // En caso de error, limpiar y redirigir
+        try {
+          await nuclearCacheCleanup(clerk);
+        } catch (e) {
+          // Ignorar errores de limpieza
+        }
+        
         window.location.href = '/sign-in';
         return null;
       }
     };
 
-    setTokenGetter(tokenGetter);
+    // Configurar el sistema único
+    configureTokenSystem(getTokenSimple);
   }, [getToken, isSignedIn, isLoaded, clerk]);
 
   if (!isLoaded) {

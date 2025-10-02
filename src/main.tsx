@@ -63,18 +63,6 @@ if (configError) {
       <ClerkProvider
         publishableKey={PUBLISHABLE_KEY}
         afterSignOutUrl="/"
-        tokenCache={{
-          getToken: async (key: string) => {
-            const token = sessionStorage.getItem(key);
-            return token;
-          },
-          setToken: async (key: string, token: string) => {
-            sessionStorage.setItem(key, token);
-          },
-          removeToken: async (key: string) => {
-            sessionStorage.removeItem(key);
-          },
-        }}
       >
         <App />
       </ClerkProvider>

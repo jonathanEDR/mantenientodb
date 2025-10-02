@@ -17,7 +17,15 @@ export interface IAeronave {
 export interface IAeronavesResponse {
   success: boolean;
   data: IAeronave[];
-  total: number;
+  total?: number;
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
 }
 
 export interface IAeronaveResponse {

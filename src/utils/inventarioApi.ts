@@ -13,9 +13,15 @@ import {
   EstadoAeronave
 } from '../types/inventario';
 
-// Obtener todas las aeronaves
-export const obtenerAeronaves = async (): Promise<IAeronavesResponse> => {
-  const response = await axiosInstance.get('/inventario');
+// Obtener todas las aeronaves con paginación y filtros
+export const obtenerAeronaves = async (params?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  tipo?: string;
+  estado?: string;
+}): Promise<IAeronavesResponse> => {
+  const response = await axiosInstance.get('/inventario', { params });
   return response.data;
 };
 

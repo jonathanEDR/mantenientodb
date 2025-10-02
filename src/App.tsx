@@ -4,6 +4,7 @@ import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import TokenProvider from './components/auth/TokenProvider';
+import EmergencyCleanupButton from './components/common/EmergencyCleanupButton';
 import { MantenimientoProvider } from './context/mantenimiento/MantenimientoContext';
 
 // Configuración de React Query
@@ -11,7 +12,7 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 30000, // 30 segundos - datos considerados frescos
-      cacheTime: 5 * 60 * 1000, // 5 minutos - tiempo en cache antes de garbage collection
+      gcTime: 5 * 60 * 1000, // 5 minutos - tiempo en cache antes de garbage collection (antes era cacheTime)
       refetchOnWindowFocus: false, // No refetch automático al volver a la ventana
       retry: 1, // Reintentar 1 vez en caso de error
       retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
@@ -233,6 +234,10 @@ export default function App() {
           </BrowserRouter>
         </MantenimientoProvider>
       </TokenProvider>
+      
+      {/* Botón de emergencia para limpiar caches */}
+      <EmergencyCleanupButton />
+      
       {/* React Query DevTools - solo en desarrollo */}
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
