@@ -18,6 +18,29 @@ const requestCache = new Map<string, { data: IEstadoMonitoreoComponente[]; times
 const CACHE_TTL = 30000; // 30 segundos
 const pendingRequests = new Map<string, Promise<any>>();
 
+// Rate limiting global - máximo 5 requests por segundo
+let requestQueue: Array<() => void> = [];
+let activeRequests = 0;
+const MAX_CONCURRENT_REQUESTS = 5;
+const REQUEST_INTERVAL = 200; // 200ms entre requests
+
+const executeNextRequest = () => {
+  if (activeRequests >= MAX_CONCURRENT_REQUESTS || requestQueue.length === 0) {
+    return;
+  }
+
+  const nextRequest = requestQueue.shift();
+  if (nextRequest) {
+    activeRequests++;
+    nextRequest();
+
+    setTimeout(() => {
+      activeRequests--;
+      executeNextRequest();
+    }, REQUEST_INTERVAL);
+  }
+};
+
 interface UseEstadosMonitoreoComponenteReturn {
   estados: IEstadoMonitoreoComponente[];
   estadosFiltrados: IEstadoMonitoreoComponente[];
@@ -88,36 +111,42 @@ export const useEstadosMonitoreoComponente = (componenteId?: string): UseEstados
       return;
     }
 
-    // 3. Hacer nuevo request
+    // 3. Encolar nuevo request con rate limiting
     setLoading(true);
     setError(null);
 
-    const requestPromise = obtenerEstadosMonitoreoComponente(targetComponenteId);
-    pendingRequests.set(cacheKey, requestPromise);
+    const executeRequest = async () => {
+      const requestPromise = obtenerEstadosMonitoreoComponente(targetComponenteId);
+      pendingRequests.set(cacheKey, requestPromise);
 
-    try {
-      const resultado = await requestPromise;
+      try {
+        const resultado = await requestPromise;
 
-      if (resultado.success) {
-        // Actualizar caché
-        requestCache.set(cacheKey, {
-          data: resultado.data,
-          timestamp: Date.now()
-        });
-        setEstados(resultado.data);
-        console.log(`✅ [useEstadosMonitoreo] Datos cargados y cacheados para ${targetComponenteId}`);
-      } else {
-        setError(resultado.error);
+        if (resultado.success) {
+          // Actualizar caché
+          requestCache.set(cacheKey, {
+            data: resultado.data,
+            timestamp: Date.now()
+          });
+          setEstados(resultado.data);
+          console.log(`✅ [useEstadosMonitoreo] Datos cargados y cacheados para ${targetComponenteId}`);
+        } else {
+          setError(resultado.error);
+          setEstados([]);
+        }
+      } catch (err) {
+        console.error('Error al cargar estados:', err);
+        setError('Error inesperado al cargar estados');
         setEstados([]);
+      } finally {
+        setLoading(false);
+        pendingRequests.delete(cacheKey);
       }
-    } catch (err) {
-      console.error('Error al cargar estados:', err);
-      setError('Error inesperado al cargar estados');
-      setEstados([]);
-    } finally {
-      setLoading(false);
-      pendingRequests.delete(cacheKey);
-    }
+    };
+
+    // Agregar a la cola y ejecutar
+    requestQueue.push(executeRequest);
+    executeNextRequest();
   }, []);
 
   // Crear nuevo estado
@@ -285,8 +314,8 @@ export const useEstadosMonitoreoComponente = (componenteId?: string): UseEstados
 
     const abortController = new AbortController();
 
-    // Delay aleatorio pequeño para evitar requests simultáneos
-    const randomDelay = Math.random() * 100; // 0-100ms
+    // Delay aleatorio para distribuir requests (aumentado a 0-500ms)
+    const randomDelay = Math.random() * 500; // 0-500ms para mejor distribución
     const timeoutId = setTimeout(() => {
       if (isMountedRef.current) {
         cargarEstados(componenteId);

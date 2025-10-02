@@ -159,16 +159,26 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
         ciclosLimite: ciclosData?.limite || 0
       });
 
+      let nuevoComponente: IComponente;
+
       if (componenteEditando) {
         // Actualizar componente existente
-        await axiosInstance.put(`/mantenimiento/componentes/${componenteEditando._id}`, dataToSend);
+        const response = await axiosInstance.put(`/mantenimiento/componentes/${componenteEditando._id}`, dataToSend);
+        nuevoComponente = response.data.data;
+
+        // Actualizar en el estado local sin recargar todo
+        setComponentes(prev =>
+          prev.map(c => c._id === componenteEditando._id ? nuevoComponente : c)
+        );
       } else {
         // Crear nuevo componente
-        await axiosInstance.post('/mantenimiento/componentes', dataToSend);
+        const response = await axiosInstance.post('/mantenimiento/componentes', dataToSend);
+        nuevoComponente = response.data.data;
+
+        // Agregar al estado local sin recargar todo
+        setComponentes(prev => [...prev, nuevoComponente]);
       }
-      
-      componentesYaCargados.current = false; // Forzar recarga
-      await cargarComponentes();
+
       cerrarModalComponente();
     } catch (error: any) {
       console.error('Error al guardar componente:', error);
@@ -213,8 +223,11 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
 
     try {
       await axiosInstance.delete(`/mantenimiento/componentes/${id}`);
-      componentesYaCargados.current = false; // Forzar recarga
-      await cargarComponentes();
+
+      // Eliminar del estado local sin recargar todo
+      setComponentes(prev => prev.filter(c => c._id !== id));
+
+      console.log('✅ Componente eliminado del estado local');
     } catch (error: any) {
       console.error('Error al eliminar componente:', error);
       alert('Error al eliminar el componente');
