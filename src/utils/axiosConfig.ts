@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
+import axiosRetry from 'axios-retry';
 
 // Variable global para la función de obtención de tokens
 let globalGetToken: (() => Promise<string | null>) | null = null;
@@ -12,6 +13,22 @@ const axiosInstance: AxiosInstance = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+});
+
+// Configurar reintentos automáticos
+axiosRetry(axiosInstance, {
+  retries: 3, // Número de reintentos
+  retryDelay: axiosRetry.exponentialDelay, // Delay exponencial entre reintentos
+  retryCondition: (error) => {
+    // Reintentar solo en errores de red o errores 5xx del servidor
+    return axiosRetry.isNetworkOrIdempotentRequestError(error) ||
+           (error.response?.status ? error.response.status >= 500 : false);
+  },
+  onRetry: (retryCount, error, requestConfig) => {
+    if ((import.meta as any).env.DEV) {
+      console.log(`🔄 Reintentando request (${retryCount}/3):`, requestConfig.url);
+    }
+  }
 });
 
 // Request interceptor - configurar headers de autenticación
