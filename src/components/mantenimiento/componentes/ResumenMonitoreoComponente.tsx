@@ -12,12 +12,25 @@ const ResumenMonitoreoComponente: React.FC<ResumenMonitoreoComponenteProps> = ({
   className = '',
   compactMode = false
 }) => {
-  const { estadosFiltrados, loading } = useEstadosMonitoreoComponente(componenteId);
-  
-  if (loading) {
+  // SOLUCIÓN SIMPLE: No cargar monitoreo hasta que el componente esté estable
+  const [shouldLoad, setShouldLoad] = React.useState(false);
+
+  React.useEffect(() => {
+    // Esperar 300ms antes de cargar - si el componente se desmonta antes, no carga
+    const timer = setTimeout(() => {
+      setShouldLoad(true);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  const { estadosFiltrados, loading } = useEstadosMonitoreoComponente(shouldLoad ? componenteId : undefined);
+
+  // Mientras espera a cargar o está cargando
+  if (!shouldLoad || loading) {
     return (
       <div className={`text-xs text-gray-500 ${className}`}>
-        Cargando controles...
+        {!shouldLoad ? 'Preparando...' : 'Cargando controles...'}
       </div>
     );
   }
