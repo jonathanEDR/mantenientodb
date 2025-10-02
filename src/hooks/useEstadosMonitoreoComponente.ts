@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   IEstadoMonitoreoComponente,
   IFormEstadoMonitoreo,
@@ -12,6 +12,11 @@ import {
   completarOverhaulEstado,
   filtrarEstados
 } from '../utils/estadosMonitoreoComponenteApi';
+
+// Cache global para request deduplication
+const requestCache = new Map<string, { data: IEstadoMonitoreoComponente[]; timestamp: number; promise?: Promise<any> }>();
+const CACHE_TTL = 30000; // 30 segundos
+const pendingRequests = new Map<string, Promise<any>>();
 
 interface UseEstadosMonitoreoComponenteReturn {
   estados: IEstadoMonitoreoComponente[];
@@ -53,16 +58,54 @@ export const useEstadosMonitoreoComponente = (componenteId?: string): UseEstados
   const [error, setError] = useState<string | null>(null);
   const [filtros, setFiltros] = useState<IFiltrosEstadosMonitoreo>(filtrosIniciales);
 
-  // Cargar estados de monitoreo
+  // Cargar estados de monitoreo con deduplication
   const cargarEstados = useCallback(async (targetComponenteId: string) => {
+    const cacheKey = `estados_${targetComponenteId}`;
+    const now = Date.now();
+
+    // 1. Verificar si hay un request pendiente para este componente
+    if (pendingRequests.has(cacheKey)) {
+      console.log(`⏳ [useEstadosMonitoreo] Request pendiente para ${targetComponenteId}, reutilizando...`);
+      try {
+        await pendingRequests.get(cacheKey);
+        const cached = requestCache.get(cacheKey);
+        if (cached) {
+          setEstados(cached.data);
+          setLoading(false);
+        }
+        return;
+      } catch (err) {
+        // Si el request pendiente falla, continuar con uno nuevo
+      }
+    }
+
+    // 2. Verificar caché válido
+    const cached = requestCache.get(cacheKey);
+    if (cached && (now - cached.timestamp) < CACHE_TTL) {
+      console.log(`📦 [useEstadosMonitoreo] Usando caché para ${targetComponenteId}`);
+      setEstados(cached.data);
+      setLoading(false);
+      return;
+    }
+
+    // 3. Hacer nuevo request
     setLoading(true);
     setError(null);
 
+    const requestPromise = obtenerEstadosMonitoreoComponente(targetComponenteId);
+    pendingRequests.set(cacheKey, requestPromise);
+
     try {
-      const resultado = await obtenerEstadosMonitoreoComponente(targetComponenteId);
-      
+      const resultado = await requestPromise;
+
       if (resultado.success) {
+        // Actualizar caché
+        requestCache.set(cacheKey, {
+          data: resultado.data,
+          timestamp: Date.now()
+        });
         setEstados(resultado.data);
+        console.log(`✅ [useEstadosMonitoreo] Datos cargados y cacheados para ${targetComponenteId}`);
       } else {
         setError(resultado.error);
         setEstados([]);
@@ -73,12 +116,13 @@ export const useEstadosMonitoreoComponente = (componenteId?: string): UseEstados
       setEstados([]);
     } finally {
       setLoading(false);
+      pendingRequests.delete(cacheKey);
     }
   }, []);
 
   // Crear nuevo estado
   const crearEstado = useCallback(async (
-    targetComponenteId: string, 
+    targetComponenteId: string,
     datos: IFormEstadoMonitoreo
   ): Promise<boolean> => {
     setLoading(true);
@@ -86,8 +130,12 @@ export const useEstadosMonitoreoComponente = (componenteId?: string): UseEstados
 
     try {
       const resultado = await crearEstadoMonitoreoComponente(targetComponenteId, datos);
-      
+
       if (resultado.success) {
+        // Invalidar caché
+        const cacheKey = `estados_${targetComponenteId}`;
+        requestCache.delete(cacheKey);
+
         // Agregar el nuevo estado a la lista
         setEstados(prev => [...prev, resultado.data!]);
         return true;
@@ -106,7 +154,7 @@ export const useEstadosMonitoreoComponente = (componenteId?: string): UseEstados
 
   // Actualizar estado existente
   const actualizarEstado = useCallback(async (
-    estadoId: string, 
+    estadoId: string,
     datos: Partial<IFormEstadoMonitoreo>
   ): Promise<boolean> => {
     setLoading(true);
@@ -114,11 +162,18 @@ export const useEstadosMonitoreoComponente = (componenteId?: string): UseEstados
 
     try {
       const resultado = await actualizarEstadoMonitoreoComponente(estadoId, datos);
-      
+
       if (resultado.success) {
+        // Invalidar caché (necesitamos el componenteId del estado actualizado)
+        const estadoActual = estados.find(e => e._id === estadoId);
+        if (estadoActual && estadoActual.componenteId) {
+          const cacheKey = `estados_${estadoActual.componenteId}`;
+          requestCache.delete(cacheKey);
+        }
+
         // Actualizar el estado en la lista
-        setEstados(prev => 
-          prev.map(estado => 
+        setEstados(prev =>
+          prev.map(estado =>
             estado._id === estadoId ? resultado.data! : estado
           )
         );
@@ -134,7 +189,7 @@ export const useEstadosMonitoreoComponente = (componenteId?: string): UseEstados
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [estados]);
 
   // Eliminar estado
   const eliminarEstado = useCallback(async (estadoId: string): Promise<boolean> => {
@@ -221,12 +276,37 @@ export const useEstadosMonitoreoComponente = (componenteId?: string): UseEstados
   // Calcular estados filtrados
   const estadosFiltrados = filtrarEstados(estados, filtros);
 
-  // Cargar estados inicial si se proporciona componenteId
+  // Control de montaje para evitar llamadas en componentes desmontados
+  const isMountedRef = useRef(true);
+
+  // Cargar estados inicial si se proporciona componenteId con AbortController
   useEffect(() => {
-    if (componenteId) {
-      cargarEstados(componenteId);
-    }
+    if (!componenteId || !isMountedRef.current) return;
+
+    const abortController = new AbortController();
+
+    // Delay aleatorio pequeño para evitar requests simultáneos
+    const randomDelay = Math.random() * 100; // 0-100ms
+    const timeoutId = setTimeout(() => {
+      if (isMountedRef.current) {
+        cargarEstados(componenteId);
+      }
+    }, randomDelay);
+
+    return () => {
+      clearTimeout(timeoutId);
+      abortController.abort();
+      console.log(`🛑 [useEstadosMonitoreo] Componente desmontado, cancelando requests para ${componenteId}`);
+    };
   }, [componenteId, cargarEstados]);
+
+  // Cleanup al desmontar
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   return {
     estados,

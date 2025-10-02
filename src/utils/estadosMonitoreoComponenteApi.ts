@@ -7,14 +7,28 @@ import {
 } from '../types/estadosMonitoreoComponente';
 
 // Obtener todos los estados de monitoreo de un componente
-export const obtenerEstadosMonitoreoComponente = async (componenteId: string) => {
+export const obtenerEstadosMonitoreoComponente = async (
+  componenteId: string,
+  signal?: AbortSignal
+) => {
   try {
-    const response = await axiosInstance.get(`/estados-monitoreo-componente/componente/${componenteId}`);
+    const response = await axiosInstance.get(`/estados-monitoreo-componente/componente/${componenteId}`, {
+      signal
+    });
     return {
       success: true,
       data: response.data.data as IEstadoMonitoreoComponente[]
     };
   } catch (error: any) {
+    // No reportar errores de cancelación
+    if (error.name === 'CanceledError' || error.code === 'ERR_CANCELED') {
+      console.log(`🚫 [API] Request cancelado para componente ${componenteId}`);
+      return {
+        success: false,
+        error: 'Request cancelado',
+        data: []
+      };
+    }
     console.error('Error al obtener estados de monitoreo del componente:', error);
     return {
       success: false,
