@@ -1,8 +1,6 @@
 import React, { useEffect } from 'react';
-import { useAuth, useClerk } from '@clerk/clerk-react';
+import { useAuth } from '@clerk/clerk-react';
 import { configureTokenSystem } from '../../utils/axiosConfig';
-import { nuclearCacheCleanup, checkForExpiredTokens } from '../../utils/cacheCleanup';
-import { UserCacheDiagnostics } from '../../utils/userCacheDiagnostics';
 
 interface TokenProviderProps {
   children: React.ReactNode;
@@ -10,100 +8,29 @@ interface TokenProviderProps {
 
 export default function TokenProvider({ children }: TokenProviderProps) {
   const { getToken, isSignedIn, isLoaded } = useAuth();
-  const clerk = useClerk();
-
-  // Efecto para manejar cambios en el estado de autenticación
-  useEffect(() => {
-    if (!isLoaded) return;
-
-    // Limpieza proactiva al detectar cambio de estado de autenticación
-    const handleAuthChange = async () => {
-      if (!isSignedIn) {
-        // Usuario no autenticado - limpiar todo inmediatamente
-        await nuclearCacheCleanup(clerk);
-        // Limpiar también configuración de token
-        configureTokenSystem(() => Promise.resolve(null));
-        return;
-      }
-
-      // Verificar y limpiar tokens expirados silenciosamente
-      const foundExpiredTokens = checkForExpiredTokens();
-      if (foundExpiredTokens) {
-        // Limpieza automática sin logs molestos
-        await nuclearCacheCleanup(clerk);
-        window.location.reload();
-        return;
-      }
-    };
-
-    handleAuthChange();
-  }, [isSignedIn, isLoaded, clerk]);
 
   useEffect(() => {
     if (!isLoaded) return;
 
-    // ✅ Sistema optimizado de obtención de tokens
+    // Sistema simple de obtención de tokens
     const getTokenSimple = async (): Promise<string | null> => {
       if (!isSignedIn) {
         return null;
       }
 
       try {
-        // Obtener token fresco para evitar cache issues
-        const token = await getToken({ 
-          skipCache: true,
-          template: undefined 
-        });
-        
-        if (!token) {
-          throw new Error('Token null de Clerk');
-        }
-
-        // Validación de expiración
-        try {
-          const payload = JSON.parse(atob(token.split('.')[1]));
-          const now = Math.floor(Date.now() / 1000);
-          const exp = payload.exp;
-          
-          if (!exp) {
-            return token; // Token sin expiración
-          }
-
-          // Verificar si está expirado
-          if (exp <= now) {
-            // Token expirado - ejecutar limpieza automática
-            try {
-              await nuclearCacheCleanup(clerk);
-            } catch (cleanupError) {
-              // Ignorar errores de limpieza
-            }
-            window.location.href = '/sign-in';
-            return null;
-          }
-
-          return token;
-
-        } catch (parseError) {
-          // Si no se puede parsear, usar de todas formas
-          return token;
-        }
-        
+        // Obtener token fresco
+        const token = await getToken({ skipCache: true });
+        return token;
       } catch (error) {
-        // En caso de error, limpiar y redirigir
-        try {
-          await nuclearCacheCleanup(clerk);
-        } catch (e) {
-          // Ignorar errores de limpieza
-        }
-        
-        window.location.href = '/sign-in';
+        console.error('Error obteniendo token:', error);
         return null;
       }
     };
 
-    // Configurar el sistema único
+    // Configurar el sistema de tokens
     configureTokenSystem(getTokenSimple);
-  }, [getToken, isSignedIn, isLoaded, clerk]);
+  }, [getToken, isSignedIn, isLoaded]);
 
   if (!isLoaded) {
     return (
