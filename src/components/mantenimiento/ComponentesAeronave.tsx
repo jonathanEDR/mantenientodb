@@ -6,6 +6,7 @@ import { IAeronave } from '../../types/inventario';
 import { IComponente, EstadoComponente, ComponenteCategoria } from '../../types/mantenimiento';
 import axiosInstance from '../../utils/axiosConfig';
 import { usePermissions } from '../../hooks/useRoles';
+import { obtenerEstadosMonitoreoPorAeronave } from '../../utils/estadosMonitoreoComponenteApi';
 
 interface ComponentesAeronaveProps {
   aeronave: IAeronave;
@@ -25,6 +26,9 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
   const [filteredComponentes, setFilteredComponentes] = useState<IComponente[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // ✅ NUEVO: Estado para guardar todos los estados de monitoreo (1 fetch para todos)
+  const [estadosMonitoreoPorComponente, setEstadosMonitoreoPorComponente] = useState<Record<string, any[]>>({});
   
   // Estados para el modal de detalles/historial
   const [historialAbierto, setHistorialAbierto] = useState(false);
@@ -60,7 +64,7 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
     try {
       const response = await axiosInstance.get(`/mantenimiento/componentes/aeronave/id/${aeronave._id}`);
       const componentesData = response.data.data || [];
-      
+
       // Log estratégico para gestión de horas
       if (componentesData.length > 0) {
         const resumenHoras = componentesData.map((comp: IComponente) => ({
@@ -70,15 +74,25 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
           horasLimite: comp.vidaUtil?.find(v => v.unidad === 'HORAS')?.limite || 0,
           estado: comp.estado
         }));
-        
+
         console.log('📊 [HORAS] Componentes cargados para aeronave:', {
           aeronave: aeronave.matricula,
           totalComponentes: componentesData.length,
           resumenHoras
         });
       }
-      
+
       setComponentes(componentesData);
+
+      // ✅ NUEVO: Cargar TODOS los estados de monitoreo en 1 solo batch
+      console.log(`🚀 [BATCH] Cargando estados de ${componentesData.length} componentes en batch...`);
+      const estadosResult = await obtenerEstadosMonitoreoPorAeronave(aeronave._id);
+
+      if (estadosResult.success) {
+        setEstadosMonitoreoPorComponente(estadosResult.data);
+        console.log(`✅ [BATCH] Estados cargados para ${Object.keys(estadosResult.data).length} componentes`);
+      }
+
       setError(null);
     } catch (error: any) {
       console.error('Error al cargar componentes:', error);
@@ -315,10 +329,11 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
               <span className="text-blue-600 mr-2">📊</span>
               <span className="text-blue-800 font-semibold">Controles de Monitoreo</span>
             </div>
-            <ResumenMonitoreoComponente 
+            <ResumenMonitoreoComponente
               componenteId={componente._id!}
               compactMode={true}
               className=""
+              estadosPrecargados={estadosMonitoreoPorComponente[componente._id!]}
             />
           </div>
         </div>

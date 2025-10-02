@@ -38,6 +38,52 @@ export const obtenerEstadosMonitoreoComponente = async (
   }
 };
 
+// ✅ NUEVO: Obtener todos los estados de monitoreo de todos los componentes de una aeronave (1 solo request)
+export const obtenerEstadosMonitoreoPorAeronave = async (aeronaveId: string) => {
+  try {
+    const response = await axiosInstance.get(`/mantenimiento/componentes/aeronave/id/${aeronaveId}`);
+
+    if (!response.data.success) {
+      return {
+        success: false,
+        error: 'Error al obtener componentes',
+        data: {}
+      };
+    }
+
+    const componentes = response.data.data;
+
+    // Obtener estados de monitoreo de TODOS los componentes en paralelo
+    const estadosPromises = componentes.map((comp: any) =>
+      axiosInstance.get(`/estados-monitoreo-componente/componente/${comp._id}`)
+        .then(res => ({ componenteId: comp._id, estados: res.data.data }))
+        .catch(() => ({ componenteId: comp._id, estados: [] }))
+    );
+
+    const resultados = await Promise.all(estadosPromises);
+
+    // Crear mapa: componenteId -> estados
+    const estadosPorComponente: Record<string, IEstadoMonitoreoComponente[]> = {};
+    resultados.forEach(({ componenteId, estados }) => {
+      estadosPorComponente[componenteId] = estados;
+    });
+
+    console.log(`✅ [API] Cargados estados de ${componentes.length} componentes en 1 batch`);
+
+    return {
+      success: true,
+      data: estadosPorComponente
+    };
+  } catch (error: any) {
+    console.error('Error al obtener estados de monitoreo por aeronave:', error);
+    return {
+      success: false,
+      error: error.response?.data?.message || 'Error al obtener estados de monitoreo',
+      data: {}
+    };
+  }
+};
+
 // Crear nuevo estado de monitoreo para un componente
 export const crearEstadoMonitoreoComponente = async (
   componenteId: string,
