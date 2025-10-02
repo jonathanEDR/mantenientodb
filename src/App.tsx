@@ -1,9 +1,10 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import TokenProvider from './components/auth/TokenProvider';
+import AuthGuard from './components/auth/AuthGuard';
 import EmergencyCleanupButton from './components/common/EmergencyCleanupButton';
 import { MantenimientoProvider } from './context/mantenimiento/MantenimientoContext';
 
@@ -53,56 +54,36 @@ export default function App() {
         <Route
           path="/dashboard"
           element={
-            <>
-              <SignedIn>
-                <Dashboard />
-              </SignedIn>
-              <SignedOut>
-                <RedirectToSignIn />
-              </SignedOut>
-            </>
+            <AuthGuard>
+              <Dashboard />
+            </AuthGuard>
           }
         />
 
         <Route
           path="/profile"
           element={
-            <>
-              <SignedIn>
-                <Profile />
-              </SignedIn>
-              <SignedOut>
-                <RedirectToSignIn />
-              </SignedOut>
-            </>
+            <AuthGuard>
+              <Profile />
+            </AuthGuard>
           }
         />
 
         <Route
           path="/personal"
           element={
-            <>
-              <SignedIn>
-                <GestionPersonal />
-              </SignedIn>
-              <SignedOut>
-                <RedirectToSignIn />
-              </SignedOut>
-            </>
+            <AuthGuard>
+              <GestionPersonal />
+            </AuthGuard>
           }
         />
 
         <Route
           path="/inventario"
           element={
-            <>
-              <SignedIn>
-                <GestionInventario />
-              </SignedIn>
-              <SignedOut>
-                <RedirectToSignIn />
-              </SignedOut>
-            </>
+            <AuthGuard>
+              <GestionInventario />
+            </AuthGuard>
           }
         />
 
@@ -111,123 +92,84 @@ export default function App() {
         <Route
           path="/mantenimiento"
           element={
-            <>
-              <SignedIn>
-                <DashboardMantenimiento />
-              </SignedIn>
-              <SignedOut>
-                <RedirectToSignIn />
-              </SignedOut>
-            </>
+            <AuthGuard>
+              <DashboardMantenimiento />
+            </AuthGuard>
           }
         />
 
         <Route
           path="/mantenimiento/componentes"
           element={
-            <>
-              <SignedIn>
-                <GestionComponentes />
-              </SignedIn>
-              <SignedOut>
-                <RedirectToSignIn />
-              </SignedOut>
-            </>
+            <AuthGuard>
+              <GestionComponentes />
+            </AuthGuard>
           }
         />
 
         <Route
           path="/mantenimiento/ordenes"
           element={
-            <>
-              <SignedIn>
-                <GestionOrdenes />
-              </SignedIn>
-              <SignedOut>
-                <RedirectToSignIn />
-              </SignedOut>
-            </>
+            <AuthGuard>
+              <GestionOrdenes />
+            </AuthGuard>
           }
         />
 
         <Route
           path="/mantenimiento/inspecciones"
           element={
-            <>
-              <SignedIn>
-                <GestionInspecciones />
-              </SignedIn>
-              <SignedOut>
-                <RedirectToSignIn />
-              </SignedOut>
-            </>
+            <AuthGuard>
+              <GestionInspecciones />
+            </AuthGuard>
           }
         />
 
         <Route
           path="/mantenimiento/monitoreo"
           element={
-            <>
-              <SignedIn>
-                <MonitoreoFlota />
-              </SignedIn>
-              <SignedOut>
-                <RedirectToSignIn />
-              </SignedOut>
-            </>
+            <AuthGuard>
+              <MonitoreoFlota />
+            </AuthGuard>
           }
         />
 
         <Route
           path="/herramientas"
           element={
-            <>
-              <SignedIn>
-                <GestionHerramientas />
-              </SignedIn>
-              <SignedOut>
-                <RedirectToSignIn />
-              </SignedOut>
-            </>
+            <AuthGuard>
+              <GestionHerramientas />
+            </AuthGuard>
           }
         />
 
         <Route
           path="/herramientas/catalogo-componentes"
           element={
-            <>
-              <SignedIn>
-                <GestionCatalogoComponentes />
-              </SignedIn>
-              <SignedOut>
-                <RedirectToSignIn />
-              </SignedOut>
-            </>
+            <AuthGuard>
+              <GestionCatalogoComponentes />
+            </AuthGuard>
           }
         />
 
         <Route
           path="/herramientas/control-monitoreo"
           element={
-            <>
-              <SignedIn>
-                <GestionCatalogoControlMonitoreo />
-              </SignedIn>
-              <SignedOut>
-                <RedirectToSignIn />
-              </SignedOut>
-            </>
+            <AuthGuard>
+              <GestionCatalogoControlMonitoreo />
+            </AuthGuard>
           }
         />
 
         <Route
           path="/settings"
           element={
-            <>
-              <SignedOut>
-                <RedirectToSignIn />
-              </SignedOut>
-            </>
+            <AuthGuard>
+              <div className="p-8 text-center">
+                <h1 className="text-2xl font-bold mb-4">Configuración</h1>
+                <p className="text-gray-600">Página en construcción</p>
+              </div>
+            </AuthGuard>
           }
         />
       </Routes>

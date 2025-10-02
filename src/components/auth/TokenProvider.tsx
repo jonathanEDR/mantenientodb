@@ -12,18 +12,35 @@ export default function TokenProvider({ children }: TokenProviderProps) {
   const { getToken, isSignedIn, isLoaded } = useAuth();
   const clerk = useClerk();
 
+  // Efecto para manejar cambios en el estado de autenticación
   useEffect(() => {
     if (!isLoaded) return;
 
-    // Verificar y limpiar tokens expirados silenciosamente
-    const foundExpiredTokens = checkForExpiredTokens();
-    if (foundExpiredTokens) {
-      // Limpieza automática sin logs molestos
-      nuclearCacheCleanup(clerk).then(() => {
+    // Limpieza proactiva al detectar cambio de estado de autenticación
+    const handleAuthChange = async () => {
+      if (!isSignedIn) {
+        // Usuario no autenticado - limpiar todo inmediatamente
+        await nuclearCacheCleanup(clerk);
+        // Limpiar también configuración de token
+        configureTokenSystem(() => Promise.resolve(null));
+        return;
+      }
+
+      // Verificar y limpiar tokens expirados silenciosamente
+      const foundExpiredTokens = checkForExpiredTokens();
+      if (foundExpiredTokens) {
+        // Limpieza automática sin logs molestos
+        await nuclearCacheCleanup(clerk);
         window.location.reload();
-      });
-      return;
-    }
+        return;
+      }
+    };
+
+    handleAuthChange();
+  }, [isSignedIn, isLoaded, clerk]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
 
     // ✅ Sistema optimizado de obtención de tokens
     const getTokenSimple = async (): Promise<string | null> => {
