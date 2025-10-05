@@ -3,22 +3,8 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import './index.css';
 import { ClerkProvider } from '@clerk/clerk-react';
-import { QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { Toaster } from 'react-hot-toast';
 import ConfigError from './components/common/ConfigError';
-import { registerServiceWorker, setupOnlineDetection } from './utils/registerServiceWorker';
-import { queryClient } from './config/queryClient';
-
-// Importar debugging y diagnósticos solo en desarrollo
-if ((import.meta as any).env.DEV) {
-  import('./utils/debug');
-  import('./utils/diagnosticManager');
-}
-
-// Registrar Service Worker para caché offline
-registerServiceWorker();
-setupOnlineDetection();
 
 // Validación mejorada de variables de entorno
 const PUBLISHABLE_KEY = (import.meta as any).env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -64,32 +50,29 @@ if (configError) {
 } else {
   createRoot(rootEl).render(
     <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <ClerkProvider
-          publishableKey={PUBLISHABLE_KEY}
-          afterSignOutUrl="/"
-          signInUrl="/sign-in"
-          signUpUrl="/sign-up"
-          afterSignInUrl="/dashboard"
-          afterSignUpUrl="/dashboard"
-        >
-          <App />
-          <Toaster
-            position="top-right"
-            reverseOrder={false}
-            gutter={8}
-            toastOptions={{
-              duration: 4000,
-              style: {
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: '500',
-              },
-            }}
-          />
-        </ClerkProvider>
-        {(import.meta as any).env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
-      </QueryClientProvider>
+      <ClerkProvider
+        publishableKey={PUBLISHABLE_KEY}
+        afterSignOutUrl="/"
+        signInUrl="/sign-in"
+        signUpUrl="/sign-up"
+        afterSignInUrl="/dashboard"
+        afterSignUpUrl="/dashboard"
+      >
+        <App />
+        <Toaster
+          position="top-right"
+          reverseOrder={false}
+          gutter={8}
+          toastOptions={{
+            duration: 4000,
+            style: {
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: '500',
+            },
+          }}
+        />
+      </ClerkProvider>
     </React.StrictMode>
   );
 }

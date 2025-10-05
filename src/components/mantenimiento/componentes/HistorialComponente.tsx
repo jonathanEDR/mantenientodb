@@ -454,6 +454,7 @@ export default function HistorialComponente({
           {activeTab === 'monitoreo' && (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Estados de Monitoreo</h3>
+              
               <EstadosMonitoreoComponente 
                 componenteId={componente._id!}
                 numeroSerie={componente.numeroSerie}

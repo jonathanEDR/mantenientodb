@@ -1,24 +1,8 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import TokenProvider from './components/auth/TokenProvider';
 import AuthGuard from './components/auth/AuthGuard';
-import EmergencyCleanupButton from './components/common/EmergencyCleanupButton';
 import { MantenimientoProvider } from './context/mantenimiento/MantenimientoContext';
-
-// Configuración de React Query
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 30000, // 30 segundos - datos considerados frescos
-      gcTime: 5 * 60 * 1000, // 5 minutos - tiempo en cache antes de garbage collection (antes era cacheTime)
-      refetchOnWindowFocus: false, // No refetch automático al volver a la ventana
-      retry: 1, // Reintentar 1 vez en caso de error
-      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
-    },
-  },
-});
 import Home from './pages/Home';
 import SignInPage from './components/auth/SignInPage';
 import SignUpPage from './components/auth/SignUpPage';
@@ -37,10 +21,9 @@ import MonitoreoFlota from './pages/MonitoreoFlota';
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TokenProvider>
-        <MantenimientoProvider>
-          <BrowserRouter>
+    <TokenProvider>
+      <MantenimientoProvider>
+        <BrowserRouter>
       <Routes>
         {/* Página pública */}
         <Route path="/" element={<Home />} />
@@ -172,15 +155,8 @@ export default function App() {
           }
         />
       </Routes>
-          </BrowserRouter>
-        </MantenimientoProvider>
-      </TokenProvider>
-      
-      {/* Botón de emergencia para limpiar caches */}
-      <EmergencyCleanupButton />
-      
-      {/* React Query DevTools - solo en desarrollo */}
-      <ReactQueryDevtools initialIsOpen={false} />
-    </QueryClientProvider>
+        </BrowserRouter>
+      </MantenimientoProvider>
+    </TokenProvider>
   );
 }

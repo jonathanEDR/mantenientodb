@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import HistorialComponente from './componentes/HistorialComponente';
 import ComponenteModal from './componentes/ComponenteModal';
-import ResumenMonitoreoComponente from './componentes/ResumenMonitoreoComponente';
 import { IAeronave } from '../../types/inventario';
 import { IComponente, EstadoComponente, ComponenteCategoria } from '../../types/mantenimiento';
 import axiosInstance from '../../utils/axiosConfig';
 import { usePermissions } from '../../hooks/useRoles';
-import { obtenerEstadosMonitoreoPorAeronave } from '../../utils/estadosMonitoreoComponenteApi';
 
 interface ComponentesAeronaveProps {
   aeronave: IAeronave;
@@ -27,8 +25,7 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // ✅ NUEVO: Estado para guardar todos los estados de monitoreo (1 fetch para todos)
-  const [estadosMonitoreoPorComponente, setEstadosMonitoreoPorComponente] = useState<Record<string, any[]>>({});
+
   
   // Estados para el modal de detalles/historial
   const [historialAbierto, setHistorialAbierto] = useState(false);
@@ -94,14 +91,7 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
 
       setComponentes(componentesData);
 
-      // ✅ NUEVO: Cargar TODOS los estados de monitoreo en 1 solo batch
-      console.log(`🚀 [BATCH] Cargando estados de ${componentesData.length} componentes en batch...`);
-      const estadosResult = await obtenerEstadosMonitoreoPorAeronave(aeronave._id);
-
-      if (estadosResult.success) {
-        setEstadosMonitoreoPorComponente(estadosResult.data);
-        console.log(`✅ [BATCH] Estados cargados para ${Object.keys(estadosResult.data).length} componentes`);
-      }
+      // Componentes cargados exitosamente
 
       setError(null);
     } catch (error: any) {
@@ -345,19 +335,11 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
           </div>
         </div>
 
-        {/* Resumen de Estados de Monitoreo - Rediseñado */}
-        <div className="bg-gradient-to-r from-blue-50/80 to-indigo-50/80 rounded-xl p-4 border border-blue-100/50">
-          <div className="text-sm">
-            <div className="flex items-center mb-3">
-              <span className="text-blue-600 mr-2">📊</span>
-              <span className="text-blue-800 font-semibold">Controles de Monitoreo</span>
-            </div>
-            <ResumenMonitoreoComponente
-              componenteId={componente._id!}
-              compactMode={true}
-              className=""
-              estadosPrecargados={estadosMonitoreoPorComponente[componente._id!]}
-            />
+        {/* Información básica del componente */}
+        <div className="bg-gradient-to-r from-gray-50/80 to-slate-50/80 rounded-xl p-4 border border-gray-100/50">
+          <div className="text-sm text-gray-600 flex items-center">
+            <span className="text-gray-500 mr-2">ℹ️</span>
+            <span className="font-medium">Estado: {componente.estado}</span>
           </div>
         </div>
 

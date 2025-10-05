@@ -77,15 +77,9 @@ export const useMonitoreoCompleto = () => {
       setLoading(true);
       setError(null);
 
-      console.log('🔍 [HOOK-MONITOREO] Obteniendo datos de monitoreo completo...');
-
       const response = await api.get<IApiResponse<IMonitoreoCompletoResponse>>('/dashboard/monitoreo-completo');
 
       if (response.data.success && response.data.data) {
-        console.log('✅ [HOOK-MONITOREO] Datos obtenidos correctamente:', {
-          aeronaves: response.data.data.aeronaves.length,
-          componentes: response.data.data.resumenGeneral.totalComponentes
-        });
 
         return {
           success: true,
@@ -97,7 +91,6 @@ export const useMonitoreoCompleto = () => {
 
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || 'Error desconocido';
-      console.error('❌ [HOOK-MONITOREO] Error:', errorMessage);
       setError(errorMessage);
       
       return {

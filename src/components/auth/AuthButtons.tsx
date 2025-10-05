@@ -1,7 +1,6 @@
 import React from 'react';
 import { SignedIn, SignedOut, UserButton, useClerk } from '@clerk/clerk-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { nuclearCacheCleanup } from '../../utils/cacheCleanup';
 
 export default function AuthButtons() {
   const clerk = useClerk();
@@ -9,25 +8,11 @@ export default function AuthButtons() {
 
   const handleSignOut = async () => {
     try {
-      // 1. Limpieza nuclear de caches antes del signOut
-      await nuclearCacheCleanup(clerk);
-      
-      // 2. SignOut de Clerk
+      // SignOut simple sin cache
       await clerk.signOut();
-      
-      // 3. Limpiar una vez más después del signOut
-      await nuclearCacheCleanup(clerk);
-      
-      // 4. Redirigir a la página principal
       navigate('/', { replace: true });
-      
-      // 5. Recargar la página para asegurar limpieza completa
-      setTimeout(() => {
-        window.location.reload();
-      }, 100);
     } catch (error) {
-      // En caso de error, forzar limpieza y redirección
-      await nuclearCacheCleanup(clerk);
+      console.error('Error al cerrar sesión:', error);
       window.location.href = '/';
     }
   };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useEstadosMonitoreoComponente } from '../../../hooks/useEstadosMonitoreoComponente';
+import { useEstadosMonitoreoSimple } from '../../../hooks/useEstadosMonitoreoSimple';
 
 interface ResumenMonitoreoComponenteProps {
   componenteId: string;
@@ -42,7 +42,7 @@ const ResumenMonitoreoComponente: React.FC<ResumenMonitoreoComponenteProps> = ({
     return () => clearTimeout(timer);
   }, []);
 
-  const { estadosFiltrados, loading } = useEstadosMonitoreoComponente(shouldLoad ? componenteId : undefined);
+  const { estados, loading } = useEstadosMonitoreoSimple(shouldLoad ? componenteId : undefined);
 
   // Mientras espera a cargar o está cargando
   if (!shouldLoad || loading) {
@@ -54,7 +54,7 @@ const ResumenMonitoreoComponente: React.FC<ResumenMonitoreoComponenteProps> = ({
   }
 
   // Si no hay estados, mostrar mensaje
-  if (estadosFiltrados.length === 0) {
+  if (estados.length === 0) {
     return (
       <div className={`text-xs text-gray-400 italic ${className}`}>
         Sin controles definidos
@@ -62,7 +62,7 @@ const ResumenMonitoreoComponente: React.FC<ResumenMonitoreoComponenteProps> = ({
     );
   }
 
-  return renderEstados(estadosFiltrados, compactMode, className);
+  return renderEstados(estados, compactMode, className);
 };
 
 // ✅ Función auxiliar para renderizar estados (reutilizable)
