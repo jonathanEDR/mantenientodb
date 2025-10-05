@@ -1,9 +1,10 @@
 import React from 'react';
-import { SignedIn, SignedOut, UserButton, useClerk } from '@clerk/clerk-react';
+import { SignedIn, SignedOut, UserButton, useClerk, useAuth } from '@clerk/clerk-react';
 import { Link, useNavigate } from 'react-router-dom';
 
 export default function AuthButtons() {
   const clerk = useClerk();
+  const { isSignedIn } = useAuth();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -14,6 +15,14 @@ export default function AuthButtons() {
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
       window.location.href = '/';
+    }
+  };
+
+  const handleDashboardClick = () => {
+    if (isSignedIn) {
+      navigate('/dashboard');
+    } else {
+      navigate('/sign-in');
     }
   };
 
@@ -33,11 +42,12 @@ export default function AuthButtons() {
       </SignedOut>
 
       <SignedIn>
-        <Link to="/dashboard">
-          <button className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-medium hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-lg hover:shadow-xl">
-            Dashboard
-          </button>
-        </Link>
+        <button 
+          onClick={handleDashboardClick}
+          className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-medium hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-lg hover:shadow-xl"
+        >
+          Dashboard
+        </button>
         <div className="ml-2">
           <UserButton 
             afterSignOutUrl="/"
