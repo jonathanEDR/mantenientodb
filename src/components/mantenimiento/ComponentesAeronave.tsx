@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import HistorialComponente from './componentes/HistorialComponente';
 import ComponenteModal from './componentes/ComponenteModal';
 import { IAeronave } from '../../types/inventario';
-import { IComponente, EstadoComponente, ComponenteCategoria } from '../../types/mantenimiento';
+import { IComponente, EstadoComponente } from '../../types/mantenimiento';
+import { useCatalogoComponentes } from '../../hooks/useCatalogoComponentes';
 import axiosInstance from '../../utils/axiosConfig';
 import { usePermissions } from '../../hooks/useRoles';
 
@@ -40,7 +41,10 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
   // Filtros
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEstado, setSelectedEstado] = useState<EstadoComponente | ''>('');
-  const [selectedCategoria, setSelectedCategoria] = useState<ComponenteCategoria | ''>('');
+  const [selectedCategoria, setSelectedCategoria] = useState<string>('');
+
+  // Hook para catálogo dinámico de componentes
+  const { categoriaOptions } = useCatalogoComponentes();
 
   // 📄 Estado de paginación (limitamos a 3 componentes por página para optimizar rendimiento)
   const [paginaActual, setPaginaActual] = useState(1);
@@ -492,18 +496,10 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
 
             <select
               value={selectedCategoria}
-              onChange={(e) => setSelectedCategoria(e.target.value as ComponenteCategoria | '')}
+              onChange={(e) => setSelectedCategoria(e.target.value)}
               className="border border-gray-300 rounded-lg px-3 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">Todas las categorías</option>
-              <option value={ComponenteCategoria.MOTOR_PRINCIPAL}>Motor Principal</option>
-              <option value={ComponenteCategoria.FUSELAJE}>Fuselaje</option>
-              <option value={ComponenteCategoria.TRANSMISION_PRINCIPAL}>Transmisión Principal</option>
-              <option value={ComponenteCategoria.CUBO_ROTOR_PRINCIPAL}>Cubo Rotor Principal</option>
-              <option value={ComponenteCategoria.PALAS_ROTOR_PRINCIPAL}>Palas Rotor Principal</option>
-              <option value={ComponenteCategoria.SISTEMA_HIDRAULICO}>Sistema Hidráulico</option>
-              <option value={ComponenteCategoria.SISTEMA_ELECTRICO}>Sistema Eléctrico</option>
-              <option value={ComponenteCategoria.OTROS}>Otros</option>
             </select>
 
             {/* Estadísticas rápidas */}
@@ -793,18 +789,10 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
 
             <select
               value={selectedCategoria}
-              onChange={(e) => setSelectedCategoria(e.target.value as ComponenteCategoria | '')}
+              onChange={(e) => setSelectedCategoria(e.target.value)}
               className="border border-gray-300 rounded-lg px-3 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">Todas las categorías</option>
-              <option value={ComponenteCategoria.MOTOR_PRINCIPAL}>Motor Principal</option>
-              <option value={ComponenteCategoria.FUSELAJE}>Fuselaje</option>
-              <option value={ComponenteCategoria.TRANSMISION_PRINCIPAL}>Transmisión Principal</option>
-              <option value={ComponenteCategoria.CUBO_ROTOR_PRINCIPAL}>Cubo Rotor Principal</option>
-              <option value={ComponenteCategoria.PALAS_ROTOR_PRINCIPAL}>Palas Rotor Principal</option>
-              <option value={ComponenteCategoria.SISTEMA_HIDRAULICO}>Sistema Hidráulico</option>
-              <option value={ComponenteCategoria.SISTEMA_ELECTRICO}>Sistema Eléctrico</option>
-              <option value={ComponenteCategoria.OTROS}>Otros</option>
             </select>
 
             {/* Estadísticas rápidas */}

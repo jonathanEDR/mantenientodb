@@ -1,7 +1,15 @@
 import React, { useState } from 'react';
 import { IEstadoMonitoreoComponente, IFormEstadoMonitoreo } from '../../types/estadosMonitoreoComponente';
 import { useEstadosMonitoreoSimple } from '../../hooks/useEstadosMonitoreoSimple';
-import { obtenerColorEstado, obtenerColorCriticidad, formatearFechaMonitoreo } from '../../utils/estadosMonitoreoComponenteApi';
+import { 
+  obtenerColorEstado, 
+  obtenerColorCriticidad, 
+  formatearFechaMonitoreo,
+  crearEstadoMonitoreoComponente,
+  actualizarEstadoMonitoreoComponente,
+  eliminarEstadoMonitoreoComponente,
+  completarOverhaulEstado
+} from '../../utils/estadosMonitoreoComponenteApi';
 import ModalEstadoMonitoreo from './ModalEstadoMonitoreo';
 import FiltrosEstadosMonitoreo from './FiltrosEstadosMonitoreo';
 import { usePermissions } from '../../hooks/useRoles';
@@ -31,6 +39,7 @@ const EstadosMonitoreoComponente: React.FC<EstadosMonitoreoComponenteProps> = ({
   const [modalAbierto, setModalAbierto] = useState(false);
   const [estadoEditando, setEstadoEditando] = useState<IEstadoMonitoreoComponente | null>(null);
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
+  const [guardando, setGuardando] = useState(false);
 
   // Estados temporales para funcionalidad básica
   const estadosFiltrados = estados;
@@ -54,18 +63,55 @@ const EstadosMonitoreoComponente: React.FC<EstadosMonitoreoComponenteProps> = ({
     setModalAbierto(true);
   };
 
-  const handleGuardarEstado = async (datos: IFormEstadoMonitoreo) => {
-    // Por ahora simplificado - actualizar estados después de crear/editar
-    setModalAbierto(false);
-    setEstadoEditando(null);
-    actualizarEstados();
-    return true;
+  const handleGuardarEstado = async (datos: IFormEstadoMonitoreo): Promise<boolean> => {
+    setGuardando(true);
+    
+    try {
+      let resultado;
+      
+      if (estadoEditando) {
+        // Modo edición - actualizar estado existente
+        resultado = await actualizarEstadoMonitoreoComponente(estadoEditando._id, datos);
+      } else {
+        // Modo creación - crear nuevo estado
+        resultado = await crearEstadoMonitoreoComponente(componenteId, datos);
+      }
+
+      if (resultado.success) {
+        setModalAbierto(false);
+        setEstadoEditando(null);
+        // Esperar un momento antes de actualizar para asegurar que la BD se actualizó
+        setTimeout(() => {
+          actualizarEstados();
+        }, 300);
+        return true;
+      } else {
+        alert(`Error al guardar estado: ${resultado.error}`);
+        return false;
+      }
+    } catch (error: any) {
+      alert(`Error inesperado: ${error.message || 'Error desconocido'}`);
+      return false;
+    } finally {
+      setGuardando(false);
+    }
   };
 
   const handleEliminarEstado = async (estadoId: string) => {
-    if (window.confirm('¿Estás seguro de que deseas eliminar este estado de monitoreo?')) {
-      // TODO: Implementar eliminación
-      actualizarEstados();
+    if (!window.confirm('¿Estás seguro de que deseas eliminar este estado de monitoreo?')) {
+      return;
+    }
+
+    try {
+      const resultado = await eliminarEstadoMonitoreoComponente(estadoId);
+      
+      if (resultado.success) {
+        actualizarEstados();
+      } else {
+        alert(`Error al eliminar estado: ${resultado.error}`);
+      }
+    } catch (error: any) {
+      alert(`Error inesperado: ${error.message || 'Error desconocido'}`);
     }
   };
 
@@ -73,13 +119,27 @@ const EstadosMonitoreoComponente: React.FC<EstadosMonitoreoComponenteProps> = ({
     const observaciones = prompt(
       `¿Deseas agregar observaciones sobre el overhaul completado?\n\n` +
       `Componente: ${typeof estado.componenteId === 'object' ? estado.componenteId.numeroSerie : ''}\n` +
-      `Control: ${typeof estado.catalogoControlId === 'object' ? estado.catalogoControlId.descripcionCodigo : ''}`
+      `Control: ${typeof estado.catalogoControlId === 'object' ? estado.catalogoControlId.descripcionCodigo : ''}\n` +
+      `Ciclo actual: ${estado.configuracionOverhaul?.cicloActual || 0} de ${estado.configuracionOverhaul?.ciclosOverhaul || 0}`
     );
 
-    if (observaciones !== null) { // null significa que canceló
-      // TODO: Implementar completar overhaul
-      alert(`¡Overhaul completado exitosamente!`);
-      actualizarEstados();
+    if (observaciones === null) {
+      return; // Usuario canceló
+    }
+
+    try {
+      const resultado = await completarOverhaulEstado(estado._id, observaciones || undefined);
+      
+      if (resultado.success) {
+        const cicloNuevo = resultado.data?.configuracionOverhaul?.cicloActual || 0;
+        const cicloTotal = resultado.data?.configuracionOverhaul?.ciclosOverhaul || 0;
+        alert(`¡Overhaul completado exitosamente!\n\nCiclo ${cicloNuevo} de ${cicloTotal}`);
+        actualizarEstados();
+      } else {
+        alert(`Error al completar overhaul: ${resultado.error}`);
+      }
+    } catch (error: any) {
+      alert(`Error inesperado: ${error.message || 'Error desconocido'}`);
     }
   };
 
@@ -356,7 +416,7 @@ const EstadosMonitoreoComponente: React.FC<EstadosMonitoreoComponenteProps> = ({
           setEstadoEditando(null);
         }}
         onGuardar={handleGuardarEstado}
-        loading={loading}
+        loading={guardando}
         componenteId={componenteId}
       />
     </div>

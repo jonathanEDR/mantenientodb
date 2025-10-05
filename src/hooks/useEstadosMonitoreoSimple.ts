@@ -19,15 +19,25 @@ export const useEstadosMonitoreoSimple = (componenteId?: string): UseEstadosMoni
       return;
     }
 
-    const url = `/estados-monitoreo-componente/componente/${componenteId}`;
+    // FORZAR PETICIÓN FRESCA - ELIMINAR CACHE COMPLETAMENTE
+    const timestamp = Date.now();
+    const url = `/estados-monitoreo-componente/componente/${componenteId}?nocache=${timestamp}`;
     setLoading(true);
     setError(null);
 
     try {
-      const response = await axiosInstance.get(url);
+      const response = await axiosInstance.get(url, {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+          'If-None-Match': '' // Eliminar etag cache
+        }
+      });
       
       if (response.data.success) {
-        setEstados(response.data.data || []);
+        const estadosData = response.data.data || [];
+        setEstados(estadosData);
       } else {
         setError(response.data.message);
         setEstados([]);

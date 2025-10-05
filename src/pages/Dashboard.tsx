@@ -44,14 +44,54 @@ export default function Dashboard() {
             console.log('✅ Usuario registrado exitosamente en BD:', registerResponse.data.user);
 
           } catch (registerError: any) {
-            console.error('❌ Error registrando usuario:', registerError);
-            setError(registerError.response?.data?.error || 'Error al registrar usuario');
+            console.error('❌ Error registrando usuario:', {
+              status: registerError.response?.status,
+              statusText: registerError.response?.statusText,
+              data: registerError.response?.data,
+              message: registerError.message,
+              code: registerError.code
+            });
+
+            // Mensajes de error más descriptivos
+            let errorMessage = 'Error al registrar usuario';
+            if (registerError.code === 'ERR_NETWORK') {
+              errorMessage = 'No se pudo conectar con el servidor. Verifica que el backend esté corriendo.';
+            } else if (registerError.response?.data?.error) {
+              errorMessage = registerError.response.data.error;
+            } else if (registerError.message) {
+              errorMessage = `Error al registrar usuario: ${registerError.message}`;
+            }
+
+            setError(errorMessage);
           } finally {
             setIsRegistering(false);
           }
         } else {
-          console.error('❌ Error verificando usuario:', error);
-          setError(error.response?.data?.error || 'Error al verificar usuario');
+          console.error('❌ Error verificando usuario:', {
+            status: error.response?.status,
+            statusText: error.response?.statusText,
+            data: error.response?.data,
+            message: error.message,
+            code: error.code
+          });
+
+          // Mensajes de error más descriptivos
+          let errorMessage = 'Error al verificar usuario';
+          if (error.code === 'ERR_NETWORK') {
+            errorMessage = 'No se pudo conectar con el servidor. Verifica que el backend esté corriendo en el puerto 5000.';
+          } else if (error.response?.status === 401) {
+            errorMessage = 'Token de autenticación inválido o expirado. Intenta cerrar sesión y volver a iniciar.';
+          } else if (error.response?.status === 403) {
+            errorMessage = 'Acceso denegado. Tu usuario puede estar inactivo.';
+          } else if (error.response?.status >= 500) {
+            errorMessage = 'Error del servidor. Por favor, intenta más tarde.';
+          } else if (error.response?.data?.error) {
+            errorMessage = error.response.data.error;
+          } else if (error.message) {
+            errorMessage = `Error al verificar usuario: ${error.message}`;
+          }
+
+          setError(errorMessage);
         }
       }
     };

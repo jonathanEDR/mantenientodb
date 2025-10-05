@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import GestionPersonal from './pages/GestionPersonal';
 import GestionInventario from './pages/GestionInventario';
+import GestionComponentesAeronave from './pages/GestionComponentesAeronave';
 import DashboardMantenimiento from './pages/DashboardMantenimiento';
 import GestionComponentes from './pages/GestionComponentes';
 import GestionOrdenes from './pages/GestionOrdenes';
@@ -65,6 +66,16 @@ export default function App() {
           element={
             <AuthGuard>
               <GestionInventario />
+            </AuthGuard>
+          }
+        />
+
+        {/* Nueva ruta independiente para componentes de aeronave */}
+        <Route
+          path="/componentes/aeronave/:matricula"
+          element={
+            <AuthGuard>
+              <GestionComponentesAeronave />
             </AuthGuard>
           }
         />

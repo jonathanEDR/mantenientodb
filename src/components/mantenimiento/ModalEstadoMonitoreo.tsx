@@ -191,6 +191,7 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
     }
 
     const exito = await onGuardar(formData);
+    
     if (exito) {
       // El modal se cerrará desde el componente padre
     }

@@ -53,8 +53,6 @@ interface UseMonitoreoFlotaReturn extends UseMonitoreoFlotaState {
 // Cache global para evitar múltiples peticiones
 const CACHE_KEY = 'monitoreo_flota_cache';
 const CACHE_TTL = Number(import.meta.env.VITE_CACHE_TTL) || 30000; // 30 segundos por defecto
-const IS_DEVELOPMENT = import.meta.env.VITE_NODE_ENV === 'development' || import.meta.env.DEV;
-const DEBUG_MODE = import.meta.env.VITE_DEBUG_MODE === 'true';
 let globalCache: CacheEntry | null = null;
 
 // Función para verificar si el cache es válido
@@ -65,7 +63,7 @@ const isCacheValid = (cache: CacheEntry | null): boolean => {
 
 // Función de debouncing
 const debounce = <T extends (...args: any[]) => void>(func: T, delay: number): T => {
-  let timeoutId: NodeJS.Timeout;
+  let timeoutId: ReturnType<typeof setTimeout>;
   return ((...args: any[]) => {
     clearTimeout(timeoutId);
     timeoutId = setTimeout(() => func(...args), delay);
@@ -84,7 +82,7 @@ export const useMonitoreoFlota = (): UseMonitoreoFlotaReturn => {
   });
 
   const [filtros, setFiltros] = useState<FiltrosFlota>({});
-  const fetchTimeoutRef = useRef<NodeJS.Timeout>();
+  const fetchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const retryCountRef = useRef(0);
   const maxRetries = 3;
 
@@ -135,26 +133,12 @@ export const useMonitoreoFlota = (): UseMonitoreoFlotaReturn => {
       retryCountRef.current = 0;
 
     } catch (error: any) {
-      if (DEBUG_MODE) {
-        console.error('🚨 [useMonitoreoFlota] Error al obtener resumen de flota:', error);
-        console.error('🔍 [useMonitoreoFlota] Error details:', {
-          status: error?.response?.status,
-          statusText: error?.response?.statusText,
-          data: error?.response?.data,
-          url: error?.config?.url
-        });
-      }
-
       const isRateLimitError = error?.response?.status === 429;
       const shouldRetry = isRateLimitError && retryCountRef.current < maxRetries;
 
       if (shouldRetry) {
         retryCountRef.current += 1;
         const retryDelay = Math.pow(2, retryCountRef.current) * 1000; // Exponential backoff
-
-        if (DEBUG_MODE) {
-          console.log(`🔄 [useMonitoreoFlota] Rate limit error, retrying in ${retryDelay}ms (attempt ${retryCountRef.current}/${maxRetries})`);
-        }
 
         setTimeout(() => {
           fetchResumenFlota(forceRefresh);

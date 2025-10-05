@@ -69,7 +69,7 @@ try {
 # 5. Instrucciones finales
 Write-Host "`n📋 PASOS SIGUIENTES PARA VERCEL:" -ForegroundColor Magenta
 Write-Host "1. Ve a tu dashboard de Vercel" -ForegroundColor White
-Write-Host "2. Proyecto > Settings > Environment Variables" -ForegroundColor White
+Write-Host "2. Proyecto -> Settings -> Environment Variables" -ForegroundColor White
 Write-Host "3. Configura VITE_CLERK_PUBLISHABLE_KEY con clave pk_live_..." -ForegroundColor White
 Write-Host "4. Configura VITE_API_BASE_URL=https://mantenimientoback.onrender.com" -ForegroundColor White
 Write-Host "5. Redeploy el proyecto" -ForegroundColor White

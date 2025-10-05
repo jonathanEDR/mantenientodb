@@ -94,7 +94,7 @@ export interface IComponente {
   numeroSerie: string;
   numeroParte: string;
   nombre: string;
-  categoria: ComponenteCategoria;
+  categoria: string; // Código del catálogo de componentes
   fabricante: string;
   fechaFabricacion: string;
   fechaInstalacion?: string;
@@ -329,7 +329,7 @@ export interface ICrearComponenteData {
   numeroSerie: string;
   numeroParte: string;
   nombre: string;
-  categoria: ComponenteCategoria;
+  categoria: string; // Código del catálogo de componentes
   fabricante: string;
   fechaFabricacion: string;
   aeronaveActual?: string; // ObjectId de la aeronave

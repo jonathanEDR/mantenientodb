@@ -26,45 +26,28 @@ export default function ComponenteModal({
   // Hook para obtener catálogo de componentes
   const { categoriaOptions, loading: catalogoLoading, error: catalogoError } = useCatalogoComponentes();
 
-  // Mapeo del catálogo al enum del backend
-  const mapearCatalogoAEnum = (codigoCatalogo: string): string => {
-    const mapeo: Record<string, string> = {
-      'FUSELAJE': 'FUSELAJE',
-      'MOTOR': 'MOTOR_PRINCIPAL',
-      'TRANSMISION': 'TRANSMISION_PRINCIPAL',
-      'CUBO_ROTOR': 'CUBO_ROTOR_PRINCIPAL', 
-      'PALAS_ROTOR': 'PALAS_ROTOR_PRINCIPAL',
-      'PLATO_CICLICO': 'PLATO_CICLICO',
-      'CAJA_30_GRADOS': 'CAJA_30_GRADOS',
-      'CUBO_COLA': 'CUBO_ROTOR_COLA',
-      'PALAS_COLA': 'PALAS_ROTOR_COLA',
-      'STARTER': 'STARTER_GENERADOR',
-      'BATERIAS': 'BATERIAS',
-      'HIDRAULICO': 'SISTEMA_HIDRAULICO',
-      'TREN': 'TREN_ATERRIZAJE',
-      'ELECTRICO': 'SISTEMA_ELECTRICO',
-      'INSTRUMENTOS': 'INSTRUMENTACION',
-      'CONTROLES': 'CONTROLES_VUELO'
-    };
+  // Ya no necesitamos mapeo - usamos directamente los códigos del catálogo
 
-    return mapeo[codigoCatalogo.toUpperCase()] || 'OTROS';
-  };
-
-  // Mapeo inverso: buscar código de catálogo por nombre de componente
-  const buscarCodigoPorNombre = (nombreComponente: string): string => {
+  // Buscar código de catálogo por nombre/descripción o categoría del componente
+  const buscarCodigoPorNombre = (nombreOCategoria: string): string => {
     if (!categoriaOptions.length) return ''; // Catálogo aún no cargado
     
-    // Buscar coincidencia exacta por nombre/descripción
-    const coincidenciaExacta = categoriaOptions.find(cat => 
-      cat.label.toLowerCase() === nombreComponente.toLowerCase()
+    // 1. Buscar por código exacto (para componentes existentes que ya tienen la categoría correcta)
+    const coincidenciaCodigo = categoriaOptions.find(cat => 
+      cat.value === nombreOCategoria.toUpperCase()
     );
+    if (coincidenciaCodigo) return coincidenciaCodigo.value;
     
+    // 2. Buscar coincidencia exacta por nombre/descripción
+    const coincidenciaExacta = categoriaOptions.find(cat => 
+      cat.label.toLowerCase() === nombreOCategoria.toLowerCase()
+    );
     if (coincidenciaExacta) return coincidenciaExacta.value;
     
-    // Buscar coincidencia parcial (en caso de variaciones)
+    // 3. Buscar coincidencia parcial (en caso de variaciones)
     const coincidenciaParcial = categoriaOptions.find(cat => 
-      cat.label.toLowerCase().includes(nombreComponente.toLowerCase()) ||
-      nombreComponente.toLowerCase().includes(cat.label.toLowerCase())
+      cat.label.toLowerCase().includes(nombreOCategoria.toLowerCase()) ||
+      nombreOCategoria.toLowerCase().includes(cat.label.toLowerCase())
     );
     
     return coincidenciaParcial?.value || '';
@@ -88,7 +71,7 @@ export default function ComponenteModal({
     
     const catalogoSeleccionado = categoriaOptions.find(cat => cat.value === formData.catalogoComponente);
     const nombre = catalogoSeleccionado ? catalogoSeleccionado.label : '';
-    const categoria = mapearCatalogoAEnum(formData.catalogoComponente);
+    const categoria = formData.catalogoComponente.toUpperCase(); // Usar directamente el código del catálogo
     
     return { nombre, categoria };
   }, [formData.catalogoComponente, categoriaOptions]);
@@ -158,13 +141,14 @@ export default function ComponenteModal({
     });
 
     if (componente && categoriaOptions.length > 0) {
-      const codigoCatalogo = buscarCodigoPorNombre(componente.nombre);
+      // Buscar por categoría primero, luego por nombre como fallback
+      const codigoCatalogo = buscarCodigoPorNombre(componente.categoria) || buscarCodigoPorNombre(componente.nombre);
       
       console.log('🔧 [EDIT] Buscando código de catálogo:', {
         nombreComponente: componente.nombre,
+        categoriaComponente: componente.categoria,
         codigoEncontrado: codigoCatalogo,
-        catalogoDisponible: categoriaOptions.length > 0,
-        catalogoCompleto: categoriaOptions
+        catalogoDisponible: categoriaOptions.length > 0
       });
       
       if (codigoCatalogo) {

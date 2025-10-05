@@ -1,6 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { UserRole, ICurrentUser, IRolePermissions } from '../types/usuarios';
 import { obtenerPermisosUsuario } from '../utils/usuariosApi';
+import {
+  getPermissionsFromCache,
+  savePermissionsToCache,
+  clearPermissionsCache,
+  invalidateCacheIfUserChanged
+} from '../utils/permissionsCache';
 
 // Tipos para información de rol
 interface IUserRoleInfo {
@@ -9,7 +15,7 @@ interface IUserRoleInfo {
   allPermissions: string[];
 }
 
-// Hook personalizado para cargar datos del usuario (mejorado)
+// Hook personalizado para cargar datos del usuario (mejorado con caché)
 export const useCurrentUser = () => {
   const [currentUser, setCurrentUser] = useState<ICurrentUser | null>(null);
   const [permissions, setPermissions] = useState<IRolePermissions | null>(null);
@@ -17,28 +23,56 @@ export const useCurrentUser = () => {
   const [roleInfo, setRoleInfo] = useState<IUserRoleInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loadedFromCache, setLoadedFromCache] = useState(false);
 
-  const fetchUserData = useCallback(async () => {
+  const fetchUserData = useCallback(async (useCache: boolean = true) => {
     try {
       setLoading(true);
       setError(null);
-      
+
+      // Intentar cargar desde caché primero
+      if (useCache) {
+        const cached = getPermissionsFromCache();
+
+        if (cached) {
+          console.log('⚡ Cargando permisos desde caché');
+          setCurrentUser(cached.user);
+          setPermissions(cached.permissions);
+          setUserRole(cached.user.role);
+          setRoleInfo(cached.roleInfo);
+          setLoadedFromCache(true);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Si no hay caché o se solicita omitirlo, hacer request al backend
+      console.log('🌐 Cargando permisos desde backend');
       const response = await obtenerPermisosUsuario();
-      
+
       if (response.success && response.user) {
         setCurrentUser(response.user);
         setPermissions(response.user.permissions);
         setUserRole(response.user.role);
-        
+
         // Información adicional del rol si está disponible
         if (response.roleInfo) {
           setRoleInfo(response.roleInfo);
         }
-        
+
+        // Guardar en caché para futuras cargas
+        savePermissionsToCache({
+          user: response.user,
+          permissions: response.user.permissions,
+          roleInfo: response.roleInfo || null
+        });
+
+        setLoadedFromCache(false);
+
         console.log('✅ Datos de usuario cargados:', {
           user: response.user.email,
           role: response.user.role,
-          permissionsCount: Object.keys(response.user.permissions).filter(key => 
+          permissionsCount: Object.keys(response.user.permissions).filter(key =>
             response.user.permissions[key as keyof IRolePermissions]
           ).length
         });
@@ -48,19 +82,22 @@ export const useCurrentUser = () => {
     } catch (err) {
       console.error('❌ Error al cargar datos del usuario:', err);
       setError(err instanceof Error ? err.message : 'Error desconocido');
-      
+
       // Limpiar datos en caso de error
       setCurrentUser(null);
       setPermissions(null);
       setUserRole(null);
       setRoleInfo(null);
+      clearPermissionsCache();
     } finally {
       setLoading(false);
     }
   }, []);
 
   const refreshUser = useCallback(async () => {
-    await fetchUserData();
+    console.log('🔄 Refrescando datos de usuario (sin caché)');
+    clearPermissionsCache();
+    await fetchUserData(false);
   }, [fetchUserData]);
 
   useEffect(() => {
@@ -75,6 +112,7 @@ export const useCurrentUser = () => {
     loading,
     error,
     refreshUser,
+    loadedFromCache,
     isAuthenticated: !!currentUser && !!userRole
   };
 };

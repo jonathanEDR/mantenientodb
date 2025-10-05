@@ -1,10 +1,39 @@
 // Hook Optimizado de Inventario con Cache Inteligente y Paginación
-import { useState, useEffect, useRef, useCallback } from 'react';
+i      // Verificar cache
+      if (useCache) {
+        const cachedEntry = inventarioCache.get(cacheKey);
+        if (cachedEntry && isValidCache(cachedEntry, CACHE_TTL_AERONAVES)) {
+          if (!isMountedRef.current || lastRequestRef.current !== requestId) return;
+          
+          setAeronaves(cachedEntry.data.data);
+          setPagination(cachedEntry.data.pagination || pagination);
+          setLoading(false);
+          return;
+        }
+      }te, useEff      if (response.success) {
+        setAeronaves(response.data);
+        
+        // Guardar en cache
+        inventarioCache.set(cacheKey, {
+          data: response,
+          timestamp: Date.now(),
+          page,
+          filters: debouncedFilters
+        });
+      }Callback } from 'react';
 import {
   IAeronave,
   IEstadisticasInventario,
-  ICrearAeronaveData,
-  IAeronavesResponse,
+  ICrearAeronaveDat  // Función para refrescar datos (forzar recarga)
+  const refrescarDatos = useCallback(() => {
+    // Limpiar cache
+    inventarioCache.clear();
+    
+    Promise.all([
+      cargarAeronaves(pagination.page, false),
+      cargarEstadisticas(false)
+    ]);
+  }, [pagination.page, cargarAeronaves, cargarEstadisticas]);navesResponse,
   IEstadisticasInventarioResponse
 } from '../../types/inventario';
 import {

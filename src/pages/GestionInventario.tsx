@@ -1,15 +1,13 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
-import ComponentesAeronave from '../components/mantenimiento/ComponentesAeronave';
 import AeronaveList from '../components/inventario/AeronaveList';
 import FormularioAeronave from '../components/inventario/FormularioAeronave';
 import GestionHorasAeronave from '../components/inventario/GestionHorasAeronave';
 import EstadisticasInventario from '../components/inventario/EstadisticasInventario';
 import { 
   useInventario, 
-  useFormularioAeronave, 
-  useVistaInventario,
+  useFormularioAeronave,
   obtenerColorEstado 
 } from '../hooks/inventario';
 import { eliminarAeronave } from '../utils/inventarioApi';
@@ -18,12 +16,19 @@ import { IAeronave } from '../types/inventario';
 const GestionInventario: React.FC = () => {
   // Hooks personalizados
   const navigate = useNavigate();
-  const { aeronaves, estadisticas, loading, error, cargarDatos } = useInventario();
-  const vista = useVistaInventario();
-  const formulario = useFormularioAeronave(cargarDatos);
+  const { aeronaves, estadisticas, loading, error, refrescarDatos } = useInventario();
+  const formulario = useFormularioAeronave(refrescarDatos);
+
+  // Handler para navegar a componentes de aeronave
+  const handleVerComponentes = (aeronave: IAeronave) => {
+    navigate(`/componentes/aeronave/${aeronave.matricula}`);
+  };
 
   // Función para manejar búsqueda
   const [busqueda, setBusqueda] = React.useState('');
+
+  // Estado local para tipo de vista (tarjetas o tabla)
+  const [vistaEnTarjetas, setVistaEnTarjetas] = React.useState(true);
 
   // Estado para gestión de horas
   const [mostrarGestionHoras, setMostrarGestionHoras] = React.useState(false);
@@ -44,7 +49,7 @@ const GestionInventario: React.FC = () => {
   // Función para manejar actualización de aeronave después de gestión de horas
   const manejarAeronaveActualizada = (aeronaveActualizada: IAeronave) => {
     // Actualizar en la lista local
-    cargarDatos();
+    refrescarDatos();
     // Cerrar modal después de una breve pausa para mostrar resultado
     setTimeout(() => {
       cerrarGestionHoras();
@@ -58,7 +63,7 @@ const GestionInventario: React.FC = () => {
         const response = await eliminarAeronave(aeronave._id);
         if (response.success) {
           alert('Aeronave eliminada exitosamente');
-          cargarDatos();
+          refrescarDatos();
         }
       } catch (err: any) {
         console.error('Error al eliminar aeronave:', err);
@@ -88,65 +93,19 @@ const GestionInventario: React.FC = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Vista condicional */}
-        {vista.vistaComponentes && vista.aeronaveSeleccionada ? (
-          /* Vista de componentes */
-          <div className="space-y-6">
-            {/* Header de componentes con botón regresar */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <button
-                    onClick={vista.volverAeronaves}
-                    className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
-                  >
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                    Volver a Aeronaves
-                  </button>
-                  <div className="h-6 w-px bg-gray-300"></div>
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900">
-                      Componentes de {vista.aeronaveSeleccionada.matricula}
-                    </h2>
-                    <p className="text-gray-600">
-                      {vista.aeronaveSeleccionada.fabricante} {vista.aeronaveSeleccionada.modelo} • {vista.aeronaveSeleccionada.tipo}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${obtenerColorEstado(vista.aeronaveSeleccionada.estado)}`}>
-                    {vista.aeronaveSeleccionada.estado}
-                  </span>
-                </div>
-              </div>
-            </div>
-            
-            {/* Componente de gestión de componentes en lugar */}
-            <ComponentesAeronave
-              aeronave={vista.aeronaveSeleccionada}
-              isOpen={true}
-              onClose={vista.volverAeronaves}
-              isInPlace={true}
-            />
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Inventario de Aeronaves</h1>
+            <p className="text-gray-600">Administra el inventario de aeronaves</p>
           </div>
-        ) : (
-          /* Vista de aeronaves */
-          <>
-            {/* Header */}
-            <div className="flex justify-between items-center">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">  Inventario</h1>
-                <p className="text-gray-600">Administra el inventario de aeronaves</p>
-              </div>
-              <button
-                onClick={formulario.nuevaAeronave}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                + Nueva Aeronave
-              </button>
-            </div>
+          <button
+            onClick={formulario.nuevaAeronave}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            + Nueva Aeronave
+          </button>
+        </div>
 
             {/* Estadísticas */}
             {estadisticas && (
@@ -171,9 +130,9 @@ const GestionInventario: React.FC = () => {
                   <span className="text-sm text-gray-600">Vista:</span>
                   <div className="flex bg-gray-100 rounded-lg p-1">
                     <button
-                      onClick={() => vista.setVistaEnTarjetas(true)}
+                      onClick={() => setVistaEnTarjetas(true)}
                       className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                        vista.vistaEnTarjetas
+                        vistaEnTarjetas
                           ? 'bg-white text-blue-600 shadow-sm'
                           : 'text-gray-600 hover:text-gray-900'
                       }`}
@@ -184,9 +143,9 @@ const GestionInventario: React.FC = () => {
                       Tarjetas
                     </button>
                     <button
-                      onClick={() => vista.setVistaEnTarjetas(false)}
+                      onClick={() => setVistaEnTarjetas(false)}
                       className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                        !vista.vistaEnTarjetas
+                        !vistaEnTarjetas
                           ? 'bg-white text-blue-600 shadow-sm'
                           : 'text-gray-600 hover:text-gray-900'
                       }`}
@@ -206,7 +165,7 @@ const GestionInventario: React.FC = () => {
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                 <p className="text-red-600">{error}</p>
                 <button
-                  onClick={cargarDatos}
+                  onClick={refrescarDatos}
                   className="mt-2 text-red-600 hover:text-red-800 font-medium"
                 >
                   Reintentar
@@ -232,24 +191,14 @@ const GestionInventario: React.FC = () => {
             ) : (
               <AeronaveList
                 aeronaves={aeronavesFiltradas}
-                vistaEnTarjetas={vista.vistaEnTarjetas}
-                onVerComponentes={vista.verComponentesAeronave}
+                vistaEnTarjetas={vistaEnTarjetas}
+                onVerComponentes={handleVerComponentes}
                 onEditar={formulario.editarAeronave}
                 onEliminar={manejarEliminarAeronave}
                 onGestionarHoras={manejarGestionHoras}
                 obtenerColorEstado={obtenerColorEstado}
-                onVerMonitoreo={(matricula) => {
-                  // Navegar a página de monitoreo con filtro por matrícula
-                  navigate(`/monitoreo?matricula=${matricula}`);
-                }}
-                onConfigurarMonitoreo={(matricula) => {
-                  // Por ahora navegar a gestión de catálogo de control
-                  navigate('/herramientas/control-monitoreo');
-                }}
               />
             )}
-          </>
-        )}
 
         {/* Formulario Modal */}
         {formulario.mostrarFormulario && (
