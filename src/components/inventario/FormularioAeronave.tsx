@@ -97,11 +97,12 @@ const FormularioAeronave: React.FC<FormularioAeronaveProps> = ({
               <input
                 type="number"
                 name="anoFabricacion"
-                value={formulario.anoFabricacion}
+                value={formulario.anoFabricacion || ''}
                 onChange={onCambio}
                 required
                 min="1900"
                 max={new Date().getFullYear() + 1}
+                placeholder={`Ej: ${new Date().getFullYear()}`}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
@@ -145,9 +146,11 @@ const FormularioAeronave: React.FC<FormularioAeronaveProps> = ({
               <input
                 type="number"
                 name="horasVuelo"
-                value={formulario.horasVuelo}
+                value={formulario.horasVuelo || 0}
                 onChange={onCambio}
                 min="0"
+                step="0.1"
+                placeholder="0"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>

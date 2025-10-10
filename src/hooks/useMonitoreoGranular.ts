@@ -89,8 +89,6 @@ export const useMonitoreoGranular = (): UseMonitoreoGranularReturn => {
       setLoading(true);
       setError(null);
 
-      console.log('📊 [MONITOREO GRANULAR] Cargando resumen de flota...');
-
       const response = await fetch(`${API_BASE}/api/estados-monitoreo-componente/granular/flota`, {
         method: 'GET',
         headers: {
@@ -103,10 +101,9 @@ export const useMonitoreoGranular = (): UseMonitoreoGranularReturn => {
       }
 
       const data = await response.json();
-      
+
       if (data.success) {
         setResumenFlota(data.data);
-        console.log('✅ [MONITOREO GRANULAR] Resumen de flota cargado:', data.data);
       } else {
         throw new Error(data.message || 'Error al cargar resumen de flota');
       }
@@ -126,8 +123,6 @@ export const useMonitoreoGranular = (): UseMonitoreoGranularReturn => {
       setLoading(true);
       setError(null);
 
-      console.log(`📊 [MONITOREO GRANULAR] Cargando resumen de aeronave: ${aeronaveId}`);
-
       const response = await fetch(`${API_BASE}/api/estados-monitoreo-componente/granular/aeronave/${aeronaveId}`, {
         method: 'GET',
         headers: {
@@ -140,10 +135,9 @@ export const useMonitoreoGranular = (): UseMonitoreoGranularReturn => {
       }
 
       const data = await response.json();
-      
+
       if (data.success) {
         setResumenAeronave(data.data);
-        console.log('✅ [MONITOREO GRANULAR] Resumen de aeronave cargado:', data.data);
       } else {
         throw new Error(data.message || 'Error al cargar resumen de aeronave');
       }
@@ -163,8 +157,6 @@ export const useMonitoreoGranular = (): UseMonitoreoGranularReturn => {
       setLoading(true);
       setError(null);
 
-      console.log(`🚨 [MONITOREO GRANULAR] Cargando alertas críticas de aeronave: ${aeronaveId}`);
-
       const response = await fetch(`${API_BASE}/api/estados-monitoreo-componente/granular/aeronave/${aeronaveId}/criticas`, {
         method: 'GET',
         headers: {
@@ -177,10 +169,9 @@ export const useMonitoreoGranular = (): UseMonitoreoGranularReturn => {
       }
 
       const data = await response.json();
-      
+
       if (data.success) {
         setAlertasCriticas(data.data);
-        console.log('✅ [MONITOREO GRANULAR] Alertas críticas cargadas:', data.data);
       } else {
         throw new Error(data.message || 'Error al cargar alertas críticas');
       }

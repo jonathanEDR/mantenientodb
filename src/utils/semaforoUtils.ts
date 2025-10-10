@@ -3,14 +3,17 @@ import { ColorSemaforo, IResultadoSemaforo, ISemaforoPersonalizado } from '../ty
 /**
  * Calcula el color del semáforo basado en horas restantes y estado de overhaul
  * Función utilitaria para usar en componentes sin hooks
- * 
- * PRIORIDADES DE CÁLCULO:
- * 1. Si estado = 'OVERHAUL_REQUERIDO' → ROJO (máxima prioridad)
+ *
+ * PRIORIDADES DE CÁLCULO (sincronizada con backend):
+ * 1. Si requiereOverhaul = true O estado = 'OVERHAUL_REQUERIDO' → ROJO (máxima prioridad)
  * 2. Si vencido (excedió límite + umbral morado) → MORADO
- * 3. Si horasRestantes <= 0 (alcanzó o superó límite) → ROJO
- * 4. Evaluar según umbrales normales del semáforo
- * 
- * NOTA: No confiar en requiereOverhaul del backend, calculamos basado en horas
+ * 3. Si horasRestantes <= 0 (alcanzó límite) → ROJO
+ * 4. Si horasRestantes <= umbral.amarillo → ROJO (crítico, menos horas que amarillo)
+ * 5. Si horasRestantes <= umbral.naranja → NARANJA
+ * 6. Si horasRestantes <= umbral.rojo → AMARILLO
+ * 7. Si horasRestantes > umbral.rojo → VERDE
+ *
+ * IMPORTANTE: Esta lógica está sincronizada con SemaforoCalculatorService.ts del backend
  */
 export function calcularSemaforoSimple(
   horasRestantes: number,
@@ -18,12 +21,13 @@ export function calcularSemaforoSimple(
   opciones?: {
     requiereOverhaul?: boolean;
     estado?: 'OK' | 'PROXIMO' | 'VENCIDO' | 'OVERHAUL_REQUERIDO';
+    debug?: boolean;  // Activar logs de diagnóstico
   }
 ): IResultadoSemaforo {
-  
-  // ===== PRIORIDAD 1: ESTADO EXPLÍCITO OVERHAUL_REQUERIDO =====
-  // Solo confiar en el estado si es explícitamente OVERHAUL_REQUERIDO
-  if (opciones?.estado === 'OVERHAUL_REQUERIDO') {
+
+  // ===== PRIORIDAD 1: OVERHAUL REQUERIDO =====
+  // Verificar tanto el flag requiereOverhaul como el estado OVERHAUL_REQUERIDO
+  if (opciones?.requiereOverhaul === true || opciones?.estado === 'OVERHAUL_REQUERIDO') {
     return {
       color: 'ROJO',
       descripcion: 'Overhaul Requerido',
@@ -34,7 +38,7 @@ export function calcularSemaforoSimple(
       nivel: 1
     };
   }
-  
+
   // Si no hay configuración de semáforo, retornar estado por defecto
   if (!configuracion || !configuracion.habilitado) {
     return {
@@ -50,29 +54,38 @@ export function calcularSemaforoSimple(
 
   const { umbrales, descripciones } = configuracion;
   let color: ColorSemaforo = 'VERDE';
-  let descripcion = descripciones?.verde || 'OK';
+  let descripcion = descripciones?.verde || 'OK - Operación normal';
   let nivel = 4;
   let umbralActual = umbrales.verde;
   let requiereAtencion = false;
 
-  // ===== LÓGICA DE COLORES DEL SEMÁFORO =====
-  // MORADO: Componente VENCIDO (horas restantes negativas Y pasó el umbral morado)
-  if (horasRestantes < 0 && Math.abs(horasRestantes) > umbrales.morado) {
+  // ===== LÓGICA DE COLORES DEL SEMÁFORO (sincronizada con backend) =====
+
+  // MORADO: Componente SOBRE-CRÍTICO (excedió el límite por más del umbral morado)
+  if (horasRestantes < -umbrales.morado) {
     color = 'MORADO';
     descripcion = descripciones?.morado || 'SOBRE-CRÍTICO - Componente vencido en uso';
     nivel = 0; // Máxima criticidad
-    umbralActual = umbrales.morado;
+    umbralActual = -umbrales.morado;
     requiereAtencion = true;
   }
-  // ROJO: Crítico (menos de X horas antes del límite o vencido pero dentro del umbral morado)
-  else if (horasRestantes <= umbrales.rojo) {
+  // ROJO: En el límite o justo pasado (horas restantes <= 0)
+  else if (horasRestantes <= 0) {
     color = 'ROJO';
     descripcion = descripciones?.rojo || 'Crítico - Programar overhaul inmediatamente';
     nivel = 1;
-    umbralActual = umbrales.rojo;
+    umbralActual = 0;
     requiereAtencion = true;
   }
-  // NARANJA: Alto (menos de X horas antes)
+  // ROJO: Crítico (MENOS horas que el umbral amarillo)
+  else if (horasRestantes <= umbrales.amarillo) {
+    color = 'ROJO';
+    descripcion = descripciones?.rojo || 'Crítico - Programar overhaul inmediatamente';
+    nivel = 1;
+    umbralActual = umbrales.amarillo;
+    requiereAtencion = true;
+  }
+  // NARANJA: Alto (entre amarillo y naranja)
   else if (horasRestantes <= umbrales.naranja) {
     color = 'NARANJA';
     descripcion = descripciones?.naranja || 'Alto - Preparar overhaul próximo';
@@ -80,20 +93,20 @@ export function calcularSemaforoSimple(
     umbralActual = umbrales.naranja;
     requiereAtencion = true;
   }
-  // AMARILLO: Medio (menos de X horas antes)
-  else if (horasRestantes <= umbrales.amarillo) {
+  // AMARILLO: Medio (entre naranja y rojo)
+  else if (horasRestantes <= umbrales.rojo) {
     color = 'AMARILLO';
     descripcion = descripciones?.amarillo || 'Medio - Monitorear progreso';
     nivel = 3;
-    umbralActual = umbrales.amarillo;
+    umbralActual = umbrales.rojo;
     requiereAtencion = false;
   }
-  // VERDE: OK (más de X horas antes)
+  // VERDE: OK (más horas que el umbral rojo)
   else {
     color = 'VERDE';
     descripcion = descripciones?.verde || 'OK - Operación normal';
     nivel = 4;
-    umbralActual = umbrales.verde;
+    umbralActual = umbrales.rojo;
     requiereAtencion = false;
   }
 

@@ -273,56 +273,40 @@ const EstadosMonitoreoComponente: React.FC<EstadosMonitoreoComponenteProps> = ({
                 : estado.configuracionPersonalizada?.semaforoPersonalizado;
               
               // ===== CALCULAR SEMÁFORO CON SINCRONIZACIÓN DE OVERHAUL =====
-              // Solo pasa el estado, NO requiereOverhaul del backend
+              // CORRECCIÓN: Ahora pasa AMBOS estado Y requiereOverhaul del backend
               // El semáforo se calcula basado en:
-              // 1. Si estado = 'OVERHAUL_REQUERIDO' → ROJO
-              // 2. Si horasRestantes <= 0 → ROJO (alcanzó límite)
-              // 3. Evaluar según umbrales del semáforo
-              
-              // 🔍 DEBUG: Logs temporales para diagnosticar semáforo
-              if (catalogoControl?.descripcionCodigo === 'TRR') {
-                console.group('🔍 DEBUG SEMÁFORO - TRR');
-                console.log('Estado DB:', estado.estado);
-                console.log('Requiere Overhaul (backend):', estado.configuracionOverhaul?.requiereOverhaul);
-                console.log('Valor Actual:', estado.valorActual);
-                console.log('Valor Límite:', estado.valorLimite);
-                console.log('Horas Restantes:', horasRestantes);
-                console.log('Ciclo:', estado.configuracionOverhaul?.cicloActual, 'de', estado.configuracionOverhaul?.ciclosOverhaul);
-                console.log('Intervalo Overhaul:', estado.configuracionOverhaul?.intervaloOverhaul);
-                console.log('Configuración Semáforo:', JSON.stringify(configuracionSemaforo, null, 2));
-                console.groupEnd();
-              }
-              
+              // 1. Si requiereOverhaul = true O estado = 'OVERHAUL_REQUERIDO' → ROJO (prioridad máxima)
+              // 2. Si horasRestantes < -umbral.morado → MORADO (sobre-crítico)
+              // 3. Si horasRestantes <= 0 → ROJO (en el límite)
+              // 4. Evaluar según umbrales del semáforo (amarillo, naranja, rojo, verde)
+
               const resultadoSemaforo = calcularSemaforoSimple(
-                horasRestantes, 
+                horasRestantes,
                 configuracionSemaforo,
                 {
-                  estado: estado.estado  // Solo pasar el estado, no requiereOverhaul
+                  estado: estado.estado,  // Pasar estado del backend
+                  requiereOverhaul: estado.configuracionOverhaul?.requiereOverhaul  // CORRECCIÓN: Pasar flag requiereOverhaul
                 }
               );
               
-              // 🔍 DEBUG: Resultado del semáforo
-              if (catalogoControl?.descripcionCodigo === 'TRR') {
-                console.log('🔍 Resultado Semáforo TRR:', resultadoSemaforo);
-              }
-              
-              // ===== CÁLCULO TSO y TSN =====
-              // TSO = Time Since Overhaul (horas desde último overhaul)
-              // Si tiene overhaul habilitado: TSO = valorActual % intervaloOverhaul
-              // Si no tiene overhaul: TSO = valorActual
-              const tso = estado.configuracionOverhaul?.habilitarOverhaul
-                ? estado.valorActual % (estado.configuracionOverhaul.intervaloOverhaul || 1)
-                : estado.valorActual;
-              
-              // TSN = Time Since New (horas que EXCEDEN el límite del control)
-              // TSN SOLO acumula cuando valorActual > valorLimite
-              // Mientras esté dentro del límite, TSN = 0
-              const tsn = Math.max(0, estado.valorActual - estado.valorLimite);
-              
-              // Calcular horas excedidas si está vencido
-              const horasExcedidas = estado.valorActual > estado.valorLimite 
-                ? estado.valorActual - estado.valorLimite 
-                : 0;
+              // ===== CÁLCULO CORRECTO DE TSO y TSN =====
+
+              // TSO = Time Since Overhaul (Horas que EXCEDEN el límite del estado de control)
+              // DEFINICIÓN: Horas acumuladas DESPUÉS de alcanzar el límite del control
+              // - Si valorActual <= valorLimite → TSO = 0 (no ha excedido)
+              // - Si valorActual > valorLimite → TSO = valorActual - valorLimite (horas excedidas)
+              // EJEMPLO: Control 500h, Actual 520h → TSO = 20h excedido
+              const tso = Math.max(0, estado.valorActual - estado.valorLimite);
+
+              // TSN = Time Since New (Horas TOTALES acumuladas del componente)
+              // DEFINICIÓN: Suma del límite del control + las horas que lo exceden
+              // FÓRMULA: TSN = valorLimite (COLUMNA 1) + TSO (COLUMNA 2)
+              // EJEMPLO: Control 500h + TSO 20h → TSN = 520h TOTAL
+              // NOTA: TSN representa las horas totales desde la instalación/nuevo
+              const tsn = estado.valorLimite + tso;
+
+              // Alias para retrocompatibilidad visual
+              const horasExcedidas = tso;
               
               return (
                 <tr key={estado._id} className="hover:bg-gray-50">

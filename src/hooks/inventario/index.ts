@@ -293,8 +293,19 @@ export const useFormularioAeronave = (onSuccess: () => void) => {
     if (!formulario.ubicacionActual.trim()) {
       newErrors.ubicacionActual = 'La ubicación actual es requerida';
     }
-    if (formulario.anoFabricacion < 1900 || formulario.anoFabricacion > new Date().getFullYear() + 1) {
-      newErrors.anoFabricacion = 'Año de fabricación inválido';
+    
+    // Validación mejorada para año de fabricación
+    const currentYear = new Date().getFullYear();
+    const anoFabricacion = Number(formulario.anoFabricacion);
+    
+    if (isNaN(anoFabricacion) || anoFabricacion < 1900 || anoFabricacion > currentYear + 1) {
+      newErrors.anoFabricacion = `Año de fabricación debe estar entre 1900 y ${currentYear + 1}`;
+    }
+
+    // Validación para horas de vuelo
+    const horasVuelo = Number(formulario.horasVuelo);
+    if (isNaN(horasVuelo) || horasVuelo < 0) {
+      newErrors.horasVuelo = 'Las horas de vuelo deben ser un número válido mayor o igual a 0';
     }
 
     setErrors(newErrors);
@@ -310,10 +321,33 @@ export const useFormularioAeronave = (onSuccess: () => void) => {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
     
-    setFormulario((prev: ICrearAeronaveData) => ({
-      ...prev,
-      [name]: name === 'anoFabricacion' || name === 'horasVuelo' ? Number(value) : value
-    }));
+    setFormulario((prev: ICrearAeronaveData) => {
+      // Manejo especial para campos numéricos
+      if (name === 'anoFabricacion') {
+        // Permitir campo vacío temporalmente, pero asegurar que se mantenga como número
+        if (value === '') {
+          return { ...prev, [name]: '' as any }; // Temporal para UX
+        }
+        const numericValue = parseInt(value, 10);
+        return {
+          ...prev,
+          [name]: isNaN(numericValue) ? new Date().getFullYear() : numericValue
+        };
+      }
+      
+      if (name === 'horasVuelo') {
+        const numericValue = value === '' ? 0 : parseFloat(value);
+        return {
+          ...prev,
+          [name]: isNaN(numericValue) ? 0 : Math.max(0, numericValue)
+        };
+      }
+      
+      return {
+        ...prev,
+        [name]: value
+      };
+    });
   }, [errors]);
 
   // Función para resetear formulario
@@ -336,14 +370,18 @@ export const useFormularioAeronave = (onSuccess: () => void) => {
   const editarAeronave = useCallback((aeronave: IAeronave) => {
     setAeronaveEditando(aeronave);
     setFormulario({
-      matricula: aeronave.matricula,
-      tipo: aeronave.tipo,
-      modelo: aeronave.modelo,
-      fabricante: aeronave.fabricante,
-      anoFabricacion: aeronave.anoFabricacion,
-      estado: aeronave.estado,
-      ubicacionActual: aeronave.ubicacionActual,
-      horasVuelo: aeronave.horasVuelo,
+      matricula: aeronave.matricula || '',
+      tipo: aeronave.tipo || 'Helicóptero',
+      modelo: aeronave.modelo || '',
+      fabricante: aeronave.fabricante || '',
+      anoFabricacion: aeronave.anoFabricacion && !isNaN(aeronave.anoFabricacion) 
+        ? aeronave.anoFabricacion 
+        : new Date().getFullYear(),
+      estado: aeronave.estado || 'Operativo',
+      ubicacionActual: aeronave.ubicacionActual || '',
+      horasVuelo: aeronave.horasVuelo && !isNaN(aeronave.horasVuelo) 
+        ? aeronave.horasVuelo 
+        : 0,
       observaciones: aeronave.observaciones || ''
     });
     setMostrarFormulario(true);
@@ -361,9 +399,18 @@ export const useFormularioAeronave = (onSuccess: () => void) => {
     try {
       setLoading(true);
 
+      // Normalizar datos antes del envío para asegurar tipos correctos
+      const datosNormalizados = {
+        ...formulario,
+        anoFabricacion: typeof formulario.anoFabricacion === 'string' && formulario.anoFabricacion === '' 
+          ? new Date().getFullYear() 
+          : Number(formulario.anoFabricacion),
+        horasVuelo: Number(formulario.horasVuelo) || 0,
+      };
+
       if (aeronaveEditando) {
         // Actualizar aeronave existente
-        const response = await actualizarAeronave(aeronaveEditando._id, formulario);
+        const response = await actualizarAeronave(aeronaveEditando._id, datosNormalizados);
         if (response.success) {
           alert('Aeronave actualizada exitosamente');
           setMostrarFormulario(false);
@@ -373,7 +420,7 @@ export const useFormularioAeronave = (onSuccess: () => void) => {
         }
       } else {
         // Crear nueva aeronave
-        const response = await crearAeronave(formulario);
+        const response = await crearAeronave(datosNormalizados);
         if (response.success) {
           alert('Aeronave creada exitosamente');
           setMostrarFormulario(false);

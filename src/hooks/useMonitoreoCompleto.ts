@@ -112,15 +112,12 @@ export const useMonitoreoCompleto = () => {
       setLoading(true);
       setError(null);
 
-      console.log(`🔄 [HOOK-MONITOREO] Actualizando estado ${estadoId} del componente ${componenteId}`);
-
       const response = await api.patch<IApiResponse<any>>(
         `/dashboard/componente/${componenteId}/estado/${estadoId}`,
         actualizaciones
       );
 
       if (response.data.success) {
-        console.log('✅ [HOOK-MONITOREO] Estado actualizado correctamente');
         return response.data;
       } else {
         throw new Error(response.data.message || 'Error al actualizar estado');
@@ -150,18 +147,15 @@ export const useMonitoreoCompleto = () => {
       setLoading(true);
       setError(null);
 
-      console.log(`🔧 [HOOK-MONITOREO] Completando overhaul del componente ${componenteId}`);
-
       const response = await api.post<IApiResponse<any>>(
         `/dashboard/componente/${componenteId}/completar-overhaul`,
-        { 
-          estadoIds, 
-          observaciones 
+        {
+          estadoIds,
+          observaciones
         }
       );
 
       if (response.data.success) {
-        console.log('✅ [HOOK-MONITOREO] Overhaul completado correctamente');
         return response.data;
       } else {
         throw new Error(response.data.message || 'Error al completar overhaul');

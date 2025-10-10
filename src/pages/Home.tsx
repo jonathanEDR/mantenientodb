@@ -13,7 +13,7 @@ export default function Home() {
                 <span className="text-white font-bold text-lg">SC</span>
               </div>
               <div>
-                <h1 className="text-xl font-bold text-white">COEAM23</h1>
+                <h1 className="text-xl font-bold text-white">COEAN23</h1>
                 <p className="text-xs text-blue-300">Control de Mantenimiento</p>
               </div>
             </div>
@@ -35,10 +35,10 @@ export default function Home() {
                   DE MANTENIMIENTO
                 </span>
                 <br />
-                <span className="text-blue-300">COEAM23</span>
+                <span className="text-blue-300">COEAN23</span>
               </h1>
               <p className="text-xl md:text-2xl text-slate-300 max-w-3xl mx-auto leading-relaxed">
-                Plataforma integral para la gestión y control de mantenimiento aeronáutico
+                Plataforma integral para el control de mantenimiento aeronáutico
               </p>
             </div>
 

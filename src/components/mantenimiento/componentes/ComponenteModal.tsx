@@ -180,6 +180,25 @@ export default function ComponenteModal({
     }
     
     // Preparar datos para envío
+    const vidaUtilPreservada = componente && componente.vidaUtil && componente.vidaUtil.length > 0 
+      ? componente.vidaUtil.map(vida => ({
+          limite: vida.limite || 1000,
+          unidad: vida.unidad || 'HORAS' as const,
+          acumulado: vida.acumulado || 0 // Preservar horas existentes
+        }))
+      : [{ 
+          limite: 1000, 
+          unidad: 'HORAS' as const, 
+          acumulado: 0 // Solo para componentes nuevos
+        }];
+
+    console.log('🔧 [ComponenteModal] Preservando vida útil:', {
+      esEdicion: !!componente,
+      vidaUtilOriginal: componente?.vidaUtil,
+      vidaUtilPreservada,
+      numeroSerie: formData.numeroSerie
+    });
+
     const submitData = {
       nombre: componenteInfo.nombre, // Usar el nombre derivado del catálogo
       categoria: componenteInfo.categoria, // Usar la categoría mapeada al enum
@@ -187,17 +206,27 @@ export default function ComponenteModal({
       numeroParte: formData.numeroParte.trim(),
       fabricante: formData.fabricante.trim(),
       fechaFabricacion: formData.fechaFabricacion,
-      vidaUtil: [{ 
-        limite: 1000, 
-        unidad: 'HORAS' as const, 
-        acumulado: 0 
-      }],
+      vidaUtil: vidaUtilPreservada,
       ubicacionFisica: formData.ubicacionFisica.trim() || 'Almacén',
       observaciones: formData.observaciones.trim(),
       // Incluir aeronave si está seleccionada
       ...(formData.aeronaveActual && { aeronaveActual: formData.aeronaveActual }),
-      // Para actualizaciones, incluir estado
-      ...(componente && { estado: formData.estado })
+      // Para actualizaciones, preservar datos críticos adicionales
+      ...(componente && { 
+        estado: formData.estado,
+        // Preservar historial de uso existente
+        historialUso: componente.historialUso || [],
+        // Preservar mantenimiento programado
+        mantenimientoProgramado: componente.mantenimientoProgramado || [],
+        // Preservar fechas importantes
+        fechaInstalacion: componente.fechaInstalacion,
+        ultimaInspeccion: componente.ultimaInspeccion,
+        proximaInspeccion: componente.proximaInspeccion,
+        // Preservar certificaciones
+        certificaciones: componente.certificaciones || {},
+        // Preservar alertas
+        alertasActivas: componente.alertasActivas || false
+      })
     };
 
     onSubmit(submitData);
@@ -243,6 +272,28 @@ export default function ComponenteModal({
             <strong>Advertencia:</strong> No se pudo encontrar "{componente.nombre}" en el catálogo actual. 
             Seleccione el componente correspondiente o el más similar.
           </div>
+        </div>
+      )}
+
+      {/* Información de horas acumuladas para componentes existentes */}
+      {componente && componente.vidaUtil && componente.vidaUtil.length > 0 && (
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
+          <h4 className="text-sm font-medium text-blue-800 mb-2">📊 Información de Vida Útil Actual</h4>
+          <div className="space-y-2">
+            {componente.vidaUtil.map((vida, index) => (
+              <div key={index} className="flex justify-between items-center text-sm">
+                <span className="text-blue-700">
+                  <strong>{vida.unidad}:</strong> {vida.acumulado || 0} acumuladas de {vida.limite || 'N/A'} límite
+                </span>
+                <span className="text-blue-600 bg-blue-100 px-2 py-1 rounded">
+                  {((vida.acumulado || 0) / (vida.limite || 1) * 100).toFixed(1)}% utilizado
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-blue-600 mt-2">
+            ℹ️ Estas horas se preservarán al actualizar el componente. Solo cambiarán mediante operaciones específicas de mantenimiento.
+          </p>
         </div>
       )}
 

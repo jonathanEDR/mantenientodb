@@ -19,7 +19,6 @@ const AlertaComponente: React.FC<AlertaComponenteProps> = ({
   const handleProtectedClick = async () => {
     if (onClick) {
       await executeProtected(() => {
-        console.log('🔧 [ALERTA COMPONENTE] Click en componente:', alerta.numeroSerie);
         onClick();
       });
     }

@@ -33,7 +33,6 @@ const MonitoreoGranularDashboard: React.FC<MonitoreoGranularDashboardProps> = ({
   const handleClickComponente = async (alerta: IAlertaComponente) => {
     await executeProtected(() => {
       if (onClickComponente) {
-        console.log('📊 [DASHBOARD] Navegando a componente:', alerta.componenteId);
         onClickComponente(alerta.componenteId);
       }
     });
@@ -42,7 +41,6 @@ const MonitoreoGranularDashboard: React.FC<MonitoreoGranularDashboardProps> = ({
   const handleClickAeronave = async (aeronaveId: string) => {
     await executeProtected(() => {
       if (onClickAeronave) {
-        console.log('📊 [DASHBOARD] Navegando a aeronave:', aeronaveId);
         onClickAeronave(aeronaveId);
       }
     });
@@ -51,7 +49,6 @@ const MonitoreoGranularDashboard: React.FC<MonitoreoGranularDashboardProps> = ({
   // Función protegida para refrescar datos
   const handleRefresh = async () => {
     await executeProtected(async () => {
-      console.log('🔄 [DASHBOARD] Refrescando datos de monitoreo');
       await cargarResumenFlota();
     });
   };
@@ -59,7 +56,6 @@ const MonitoreoGranularDashboard: React.FC<MonitoreoGranularDashboardProps> = ({
   // Función protegida para limpiar errores
   const handleClearError = async () => {
     await executeProtected(() => {
-      console.log('🧹 [DASHBOARD] Limpiando errores');
       limpiarError();
     });
   };
@@ -198,7 +194,6 @@ const MonitoreoGranularDashboard: React.FC<MonitoreoGranularDashboardProps> = ({
             {resumenFlota.alertasPrioritarias.length > 5 && (
               <ProtectedButton
                 onClick={() => executeProtected(() => {
-                  console.log('👁️ [DASHBOARD] Toggleando vista de alertas');
                   setMostrarTodasAlertas(!mostrarTodasAlertas);
                 })}
                 className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
