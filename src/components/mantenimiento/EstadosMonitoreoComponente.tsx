@@ -3,7 +3,6 @@ import { IEstadoMonitoreoComponente, IFormEstadoMonitoreo } from '../../types/es
 import { useEstadosMonitoreoSimple } from '../../hooks/useEstadosMonitoreoSimple';
 import { 
   obtenerColorEstado, 
-  obtenerColorCriticidad, 
   formatearFechaMonitoreo,
   crearEstadoMonitoreoComponente,
   actualizarEstadoMonitoreoComponente,
@@ -13,6 +12,8 @@ import {
 import ModalEstadoMonitoreo from './ModalEstadoMonitoreo';
 import FiltrosEstadosMonitoreo from './FiltrosEstadosMonitoreo';
 import { usePermissions } from '../../hooks/useRoles';
+import SemaforoIndicador from '../semaforo/SemaforoIndicador';
+import { calcularSemaforoSimple } from '../../utils/semaforoUtils';
 
 interface EstadosMonitoreoComponenteProps {
   componenteId: string;
@@ -227,6 +228,18 @@ const EstadosMonitoreoComponente: React.FC<EstadosMonitoreoComponenteProps> = ({
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Control
               </th>
+              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                TSO
+                <div className="text-[10px] font-normal text-gray-400 normal-case mt-0.5">
+                  Time Since Overhaul
+                </div>
+              </th>
+              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                TSN
+                <div className="text-[10px] font-normal text-gray-400 normal-case mt-0.5">
+                  Time Since New
+                </div>
+              </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Progreso
               </th>
@@ -237,7 +250,7 @@ const EstadosMonitoreoComponente: React.FC<EstadosMonitoreoComponenteProps> = ({
                 Próxima Revisión
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Criticidad
+                Semáforo
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Acciones
@@ -251,6 +264,66 @@ const EstadosMonitoreoComponente: React.FC<EstadosMonitoreoComponenteProps> = ({
                 : null;
               const porcentajeProgreso = Math.min((estado.valorActual / estado.valorLimite) * 100, 100);
               
+              // Calcular horas restantes para el semáforo
+              const horasRestantes = estado.valorLimite - estado.valorActual;
+              
+              // Determinar qué configuración de semáforo usar (overhaul o personalizada)
+              const configuracionSemaforo = estado.configuracionOverhaul?.habilitarOverhaul 
+                ? estado.configuracionOverhaul.semaforoPersonalizado
+                : estado.configuracionPersonalizada?.semaforoPersonalizado;
+              
+              // ===== CALCULAR SEMÁFORO CON SINCRONIZACIÓN DE OVERHAUL =====
+              // Solo pasa el estado, NO requiereOverhaul del backend
+              // El semáforo se calcula basado en:
+              // 1. Si estado = 'OVERHAUL_REQUERIDO' → ROJO
+              // 2. Si horasRestantes <= 0 → ROJO (alcanzó límite)
+              // 3. Evaluar según umbrales del semáforo
+              
+              // 🔍 DEBUG: Logs temporales para diagnosticar semáforo
+              if (catalogoControl?.descripcionCodigo === 'TRR') {
+                console.group('🔍 DEBUG SEMÁFORO - TRR');
+                console.log('Estado DB:', estado.estado);
+                console.log('Requiere Overhaul (backend):', estado.configuracionOverhaul?.requiereOverhaul);
+                console.log('Valor Actual:', estado.valorActual);
+                console.log('Valor Límite:', estado.valorLimite);
+                console.log('Horas Restantes:', horasRestantes);
+                console.log('Ciclo:', estado.configuracionOverhaul?.cicloActual, 'de', estado.configuracionOverhaul?.ciclosOverhaul);
+                console.log('Intervalo Overhaul:', estado.configuracionOverhaul?.intervaloOverhaul);
+                console.log('Configuración Semáforo:', JSON.stringify(configuracionSemaforo, null, 2));
+                console.groupEnd();
+              }
+              
+              const resultadoSemaforo = calcularSemaforoSimple(
+                horasRestantes, 
+                configuracionSemaforo,
+                {
+                  estado: estado.estado  // Solo pasar el estado, no requiereOverhaul
+                }
+              );
+              
+              // 🔍 DEBUG: Resultado del semáforo
+              if (catalogoControl?.descripcionCodigo === 'TRR') {
+                console.log('🔍 Resultado Semáforo TRR:', resultadoSemaforo);
+              }
+              
+              // ===== CÁLCULO TSO y TSN =====
+              // TSO = Time Since Overhaul (horas desde último overhaul)
+              // Si tiene overhaul habilitado: TSO = valorActual % intervaloOverhaul
+              // Si no tiene overhaul: TSO = valorActual
+              const tso = estado.configuracionOverhaul?.habilitarOverhaul
+                ? estado.valorActual % (estado.configuracionOverhaul.intervaloOverhaul || 1)
+                : estado.valorActual;
+              
+              // TSN = Time Since New (horas que EXCEDEN el límite del control)
+              // TSN SOLO acumula cuando valorActual > valorLimite
+              // Mientras esté dentro del límite, TSN = 0
+              const tsn = Math.max(0, estado.valorActual - estado.valorLimite);
+              
+              // Calcular horas excedidas si está vencido
+              const horasExcedidas = estado.valorActual > estado.valorLimite 
+                ? estado.valorActual - estado.valorLimite 
+                : 0;
+              
               return (
                 <tr key={estado._id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -259,10 +332,35 @@ const EstadosMonitoreoComponente: React.FC<EstadosMonitoreoComponenteProps> = ({
                         {catalogoControl?.descripcionCodigo || 'N/A'}
                       </div>
                       <div className="text-sm text-gray-500">
-                        {estado.valorActual} / {estado.valorLimite} {estado.unidad.toLowerCase()}
+                        Límite: {estado.valorLimite} {estado.unidad.toLowerCase()}
                       </div>
                     </div>
                   </td>
+                  
+                  {/* Columna TSO */}
+                  <td className="px-4 py-4 whitespace-nowrap text-center">
+                    <div className="text-sm font-semibold text-gray-900">
+                      {tso} h
+                    </div>
+                    {horasExcedidas > 0 && (
+                      <div className="text-xs font-medium text-red-600 mt-1">
+                        +{horasExcedidas}h excedido
+                      </div>
+                    )}
+                  </td>
+                  
+                  {/* Columna TSN */}
+                  <td className="px-4 py-4 whitespace-nowrap text-center">
+                    <div className="text-sm font-semibold text-gray-900">
+                      {tsn} h
+                    </div>
+                    {estado.configuracionOverhaul?.habilitarOverhaul && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        Ciclo {estado.configuracionOverhaul.cicloActual} de {estado.configuracionOverhaul.ciclosOverhaul}
+                      </div>
+                    )}
+                  </td>
+                  
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div 
@@ -295,11 +393,18 @@ const EstadosMonitoreoComponente: React.FC<EstadosMonitoreoComponenteProps> = ({
                     {formatearFechaMonitoreo(estado.fechaProximaRevision)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      obtenerColorCriticidad(estado.configuracionPersonalizada?.criticidad || 'MEDIA')
-                    }`}>
-                      {estado.configuracionPersonalizada?.criticidad || 'MEDIA'}
-                    </span>
+                    {configuracionSemaforo?.habilitado ? (
+                      <SemaforoIndicador 
+                        color={resultadoSemaforo.color}
+                        descripcion={resultadoSemaforo.descripcion}
+                        tamaño="md"
+                        mostrarTexto={true}
+                      />
+                    ) : (
+                      <span className="text-xs text-gray-500 italic">
+                        Sin semáforo configurado
+                      </span>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex flex-col space-y-2">

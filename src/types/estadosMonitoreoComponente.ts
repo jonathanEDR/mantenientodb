@@ -1,4 +1,5 @@
 // Tipos para estados de monitoreo por componente
+import { ISemaforoPersonalizado } from './semaforoPersonalizado';
 
 export interface IEstadoMonitoreoComponente {
   _id: string;
@@ -23,9 +24,9 @@ export interface IEstadoMonitoreoComponente {
 }
 
 export interface IConfiguracionPersonalizada {
-  alertaAnticipada: number; // Horas antes del vencimiento para alertar
-  criticidad: 'BAJA' | 'MEDIA' | 'ALTA' | 'CRITICA';
   requiereParoAeronave: boolean;
+  // ===== SISTEMA DE SEMÁFORO PERSONALIZABLE =====
+  semaforoPersonalizado?: ISemaforoPersonalizado; // Sistema de alertas por colores
 }
 
 export interface IConfiguracionOverhaul {
@@ -38,6 +39,9 @@ export interface IConfiguracionOverhaul {
   requiereOverhaul: boolean; // Si actualmente requiere overhaul
   fechaUltimoOverhaul?: string; // Cuando se completó el último overhaul
   observacionesOverhaul?: string;
+  requiereParoAeronave: boolean; // Si el overhaul requiere paro de aeronave
+  // ===== SISTEMA DE SEMÁFORO PERSONALIZABLE =====
+  semaforoPersonalizado?: ISemaforoPersonalizado; // Sistema de alertas por colores
 }
 
 export interface IComponenteBasico {
@@ -86,6 +90,7 @@ export interface IFormEstadoMonitoreo {
   offsetInicial?: number;
   configuracionOverhaul?: IConfiguracionOverhaul;
   configuracionPersonalizada?: IConfiguracionPersonalizada;
+  semaforoPersonalizado?: ISemaforoPersonalizado;
 }
 
 // Tipos para filtros y búsquedas

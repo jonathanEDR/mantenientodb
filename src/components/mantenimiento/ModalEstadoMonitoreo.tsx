@@ -7,8 +7,62 @@ import {
   CRITICIDADES,
   ICatalogoControlMonitoreo
 } from '../../types/estadosMonitoreoComponente';
+import { 
+  ISemaforoPersonalizado,
+  CONFIGURACIONES_SEMAFORO_PREDEFINIDAS,
+  COLORES_CSS,
+  ICONOS_SEMAFORO,
+  validarUmbrales
+} from '../../types/semaforoPersonalizado';
 import { obtenerCatalogoControlMonitoreo } from '../../utils/herramientasApi';
 import { obtenerComponente } from '../../utils/mantenimientoApi';
+import SemaforoIndicador from '../common/SemaforoIndicador';
+import useSemaforo from '../../hooks/useSemaforo';
+
+// Componente interno para preview del semáforo
+const SemaforoPreview: React.FC<{ configuracion: ISemaforoPersonalizado; intervaloOverhaul: number }> = ({ 
+  configuracion, 
+  intervaloOverhaul 
+}) => {
+  // Generar ejemplos de diferentes estados
+  const ejemplos = [
+    { label: 'Ejemplo: 5h restantes', horas: 5 },
+    { label: 'Ejemplo: 30h restantes', horas: 30 },
+    { label: 'Ejemplo: 60h restantes', horas: 60 },
+    { label: 'Ejemplo: 150h restantes', horas: 150 }
+  ];
+
+  return (
+    <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+      <h5 className="text-sm font-medium text-gray-700 mb-3">🔍 Preview del Semáforo</h5>
+      <div className="space-y-2">
+        {ejemplos.map(ejemplo => {
+          const { resultado, esValido } = useSemaforo({
+            horasRestantes: ejemplo.horas,
+            intervaloOverhaul,
+            configuracion
+          });
+          
+          return (
+            <div key={ejemplo.horas} className="flex items-center justify-between p-2 bg-white rounded border">
+              <span className="text-xs text-gray-600">{ejemplo.label}</span>
+              {esValido ? (
+                <SemaforoIndicador 
+                  resultado={resultado}
+                  tamaño="pequeño"
+                  mostrarDescripcion={false}
+                  mostrarHoras={false}
+                />
+              ) : (
+                <span className="text-xs text-red-500">Config. inválida</span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
 
 interface ModalEstadoMonitoreoProps {
   abierto: boolean;
@@ -43,12 +97,48 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
       horasUltimoOverhaul: 0,
       proximoOverhaulEn: 500,
       requiereOverhaul: false,
-      observacionesOverhaul: ''
+      observacionesOverhaul: '',
+      requiereParoAeronave: false,
+      // ===== SISTEMA DE SEMÁFORO =====
+      semaforoPersonalizado: {
+        habilitado: true, // Activado por defecto
+        unidad: 'HORAS',
+        umbrales: {
+          morado: 100,
+          rojo: 100,
+          naranja: 50,
+          amarillo: 25,
+          verde: 0
+        },
+        descripciones: {
+          morado: 'SOBRE-CRÍTICO - Componente vencido en uso',
+          rojo: 'Crítico - Programar overhaul inmediatamente',
+          naranja: 'Alto - Preparar overhaul próximo',
+          amarillo: 'Medio - Monitorear progreso',
+          verde: 'OK - Funcionando normal'
+        }
+      }
     },
     configuracionPersonalizada: {
-      alertaAnticipada: 50,
-      criticidad: 'MEDIA',
-      requiereParoAeronave: false
+      requiereParoAeronave: false,
+      semaforoPersonalizado: {
+        habilitado: true, // Activado por defecto
+        unidad: 'HORAS',
+        umbrales: {
+          morado: 100,
+          rojo: 100,
+          naranja: 50,
+          amarillo: 25,
+          verde: 0
+        },
+        descripciones: {
+          morado: 'SOBRE-CRÍTICO - Componente vencido en uso',
+          rojo: 'Crítico - Acción inmediata requerida',
+          naranja: 'Alto - Planificar mantenimiento pronto',
+          amarillo: 'Medio - Monitorear de cerca',
+          verde: 'OK - Funcionando correctamente'
+        }
+      }
     }
   });
 
@@ -122,12 +212,48 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
           proximoOverhaulEn: estado.configuracionOverhaul?.proximoOverhaulEn || 500,
           requiereOverhaul: estado.configuracionOverhaul?.requiereOverhaul || false,
           fechaUltimoOverhaul: estado.configuracionOverhaul?.fechaUltimoOverhaul,
-          observacionesOverhaul: estado.configuracionOverhaul?.observacionesOverhaul || ''
+          observacionesOverhaul: estado.configuracionOverhaul?.observacionesOverhaul || '',
+          requiereParoAeronave: estado.configuracionOverhaul?.requiereParoAeronave || false,
+          // ===== SISTEMA DE SEMÁFORO =====
+          semaforoPersonalizado: estado.configuracionOverhaul?.semaforoPersonalizado || {
+            habilitado: true, // Activado por defecto
+            unidad: 'HORAS',
+            umbrales: {
+              morado: 100,
+              rojo: 100,
+              naranja: 50,
+              amarillo: 25,
+              verde: 0
+            },
+            descripciones: {
+              morado: 'SOBRE-CRÍTICO - Componente vencido en uso',
+              rojo: 'Crítico - Programar overhaul inmediatamente',
+              naranja: 'Alto - Preparar overhaul próximo',
+              amarillo: 'Medio - Monitorear progreso',
+              verde: 'OK - Funcionando normal'
+            }
+          }
         },
         configuracionPersonalizada: {
-          alertaAnticipada: estado.configuracionPersonalizada?.alertaAnticipada || 50,
-          criticidad: estado.configuracionPersonalizada?.criticidad || 'MEDIA',
-          requiereParoAeronave: estado.configuracionPersonalizada?.requiereParoAeronave || false
+          requiereParoAeronave: estado.configuracionPersonalizada?.requiereParoAeronave || false,
+          semaforoPersonalizado: estado.configuracionPersonalizada?.semaforoPersonalizado || {
+            habilitado: true,
+            unidad: 'HORAS',
+            umbrales: {
+              morado: 100,
+              rojo: 100,
+              naranja: 50,
+              amarillo: 25,
+              verde: 0
+            },
+            descripciones: {
+              morado: 'SOBRE-CRÍTICO - Componente vencido en uso',
+              rojo: 'Crítico - Acción inmediata requerida',
+              naranja: 'Alto - Planificar mantenimiento pronto',
+              amarillo: 'Medio - Monitorear de cerca',
+              verde: 'OK - Funcionando correctamente'
+            }
+          }
         }
       });
     } else {
@@ -149,12 +275,48 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
           horasUltimoOverhaul: 0,
           proximoOverhaulEn: 500,
           requiereOverhaul: false,
-          observacionesOverhaul: ''
+          observacionesOverhaul: '',
+          requiereParoAeronave: false,
+          // ===== SISTEMA DE SEMÁFORO =====
+          semaforoPersonalizado: {
+            habilitado: true, // Activado por defecto
+            unidad: 'HORAS',
+            umbrales: {
+              morado: 100,
+              rojo: 100,
+              naranja: 50,
+              amarillo: 25,
+              verde: 0
+            },
+            descripciones: {
+              morado: 'SOBRE-CRÍTICO - Componente vencido en uso',
+              rojo: 'Crítico - Programar overhaul inmediatamente',
+              naranja: 'Alto - Preparar overhaul próximo',
+              amarillo: 'Medio - Monitorear progreso',
+              verde: 'OK - Funcionando normal'
+            }
+          }
         },
         configuracionPersonalizada: {
-          alertaAnticipada: 50,
-          criticidad: 'MEDIA',
-          requiereParoAeronave: false
+          requiereParoAeronave: false,
+          semaforoPersonalizado: {
+            habilitado: true,
+            unidad: 'HORAS',
+            umbrales: {
+              morado: 100,
+              rojo: 100,
+              naranja: 50,
+              amarillo: 25,
+              verde: 0
+            },
+            descripciones: {
+              morado: 'SOBRE-CRÍTICO - Componente vencido en uso',
+              rojo: 'Crítico - Acción inmediata requerida',
+              naranja: 'Alto - Planificar mantenimiento pronto',
+              amarillo: 'Medio - Monitorear de cerca',
+              verde: 'OK - Funcionando correctamente'
+            }
+          }
         }
       });
     }
@@ -169,10 +331,6 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
     }
 
 
-
-    if (formData.configuracionPersonalizada?.alertaAnticipada! < 0) {
-      nuevosErrores.alertaAnticipada = 'La alerta anticipada no puede ser negativa';
-    }
 
     // Validación básica de que los valores se llenaron correctamente desde el catálogo
     if (formData.valorLimite <= 0) {
@@ -251,6 +409,130 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
         [campo]: valor
       }
     }));
+  };
+
+  // ===== FUNCIONES PARA MANEJO DE SEMÁFORO =====
+  const handleSemaforoChange = (campo: keyof ISemaforoPersonalizado, valor: any) => {
+    setFormData(prev => ({
+      ...prev,
+      configuracionOverhaul: {
+        ...prev.configuracionOverhaul!,
+        semaforoPersonalizado: {
+          ...prev.configuracionOverhaul!.semaforoPersonalizado!,
+          [campo]: valor
+        }
+      }
+    }));
+  };
+
+  const handleUmbralesChange = (color: 'rojo' | 'naranja' | 'amarillo' | 'verde', valor: number) => {
+    setFormData(prev => ({
+      ...prev,
+      configuracionOverhaul: {
+        ...prev.configuracionOverhaul!,
+        semaforoPersonalizado: {
+          ...prev.configuracionOverhaul!.semaforoPersonalizado!,
+          umbrales: {
+            ...prev.configuracionOverhaul!.semaforoPersonalizado!.umbrales,
+            [color]: valor
+          }
+        }
+      }
+    }));
+  };
+
+  const handleDescripcionChange = (color: 'rojo' | 'naranja' | 'amarillo' | 'verde', descripcion: string) => {
+    setFormData(prev => ({
+      ...prev,
+      configuracionOverhaul: {
+        ...prev.configuracionOverhaul!,
+        semaforoPersonalizado: {
+          ...prev.configuracionOverhaul!.semaforoPersonalizado!,
+          descripciones: {
+            ...prev.configuracionOverhaul!.semaforoPersonalizado!.descripciones!,
+            [color]: descripcion
+          }
+        }
+      }
+    }));
+  };
+
+  const aplicarConfiguracionPredefinida = (nombreConfig: string) => {
+    const config = CONFIGURACIONES_SEMAFORO_PREDEFINIDAS[nombreConfig];
+    if (config) {
+      setFormData(prev => ({
+        ...prev,
+        configuracionOverhaul: {
+          ...prev.configuracionOverhaul!,
+          semaforoPersonalizado: {
+            ...config,
+            habilitado: prev.configuracionOverhaul!.semaforoPersonalizado!.habilitado
+          }
+        }
+      }));
+    }
+  };
+
+  // ===== FUNCIONES PARA MANEJO DE SEMÁFORO PERSONALIZADO (SIN OVERHAUL) =====
+  const handleSemaforoPersonalizadoChange = (campo: keyof ISemaforoPersonalizado, valor: any) => {
+    setFormData(prev => ({
+      ...prev,
+      configuracionPersonalizada: {
+        ...prev.configuracionPersonalizada!,
+        semaforoPersonalizado: {
+          ...prev.configuracionPersonalizada!.semaforoPersonalizado!,
+          [campo]: valor
+        }
+      }
+    }));
+  };
+
+  const handleUmbralesPersonalizadoChange = (color: 'rojo' | 'naranja' | 'amarillo' | 'verde', valor: number) => {
+    setFormData(prev => ({
+      ...prev,
+      configuracionPersonalizada: {
+        ...prev.configuracionPersonalizada!,
+        semaforoPersonalizado: {
+          ...prev.configuracionPersonalizada!.semaforoPersonalizado!,
+          umbrales: {
+            ...prev.configuracionPersonalizada!.semaforoPersonalizado!.umbrales,
+            [color]: valor
+          }
+        }
+      }
+    }));
+  };
+
+  const handleDescripcionPersonalizadaChange = (color: 'rojo' | 'naranja' | 'amarillo' | 'verde', descripcion: string) => {
+    setFormData(prev => ({
+      ...prev,
+      configuracionPersonalizada: {
+        ...prev.configuracionPersonalizada!,
+        semaforoPersonalizado: {
+          ...prev.configuracionPersonalizada!.semaforoPersonalizado!,
+          descripciones: {
+            ...prev.configuracionPersonalizada!.semaforoPersonalizado!.descripciones!,
+            [color]: descripcion
+          }
+        }
+      }
+    }));
+  };
+
+  const aplicarConfiguracionPredefinidaPersonalizada = (nombreConfig: string) => {
+    const config = CONFIGURACIONES_SEMAFORO_PREDEFINIDAS[nombreConfig];
+    if (config) {
+      setFormData(prev => ({
+        ...prev,
+        configuracionPersonalizada: {
+          ...prev.configuracionPersonalizada!,
+          semaforoPersonalizado: {
+            ...config,
+            habilitado: true // Siempre activado para configuración personalizada
+          }
+        }
+      }));
+    }
   };
 
   if (!abierto) return null;
@@ -343,56 +625,119 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
 
 
 
-          {/* Configuración Personalizada */}
-          <div className="border-t pt-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Configuración de Alertas</h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Alerta Anticipada (unidades antes)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={formData.configuracionPersonalizada?.alertaAnticipada || 50}
-                  onChange={(e) => handleConfiguracionChange('alertaAnticipada', parseInt(e.target.value) || 0)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Criticidad
-                </label>
-                <select
-                  value={formData.configuracionPersonalizada?.criticidad || 'MEDIA'}
-                  onChange={(e) => handleConfiguracionChange('criticidad', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                >
-                  {CRITICIDADES.map((criticidad) => (
-                    <option key={criticidad.value} value={criticidad.value}>
-                      {criticidad.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.configuracionPersonalizada?.requiereParoAeronave || false}
-                  onChange={(e) => handleConfiguracionChange('requiereParoAeronave', e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <span className="ml-2 text-sm text-gray-700">
-                  Requiere paro de aeronave para mantenimiento
+          {/* Configuración de Alertas Simples (Solo para componentes SIN overhauls) */}
+          {!formData.configuracionOverhaul?.habilitarOverhaul && (
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <svg className="w-5 h-5 mr-2 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+                </svg>
+                Sistema de Alertas con Semáforo
+                <span className="text-sm font-normal text-gray-500 ml-2">
+                  (Monitoreo sin overhauls programados)
                 </span>
-              </label>
+              </h3>
+
+              {/* Configuración del Semáforo Personalizado */}
+              <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg border border-green-200 space-y-4">
+                {/* Configuraciones Predefinidas */}
+                <div className="bg-white p-3 rounded-lg border border-gray-200">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Configuraciones Predefinidas
+                  </label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {Object.keys(CONFIGURACIONES_SEMAFORO_PREDEFINIDAS).map(nombre => (
+                      <button
+                        key={nombre}
+                        type="button"
+                        onClick={() => aplicarConfiguracionPredefinidaPersonalizada(nombre)}
+                        className="px-3 py-2 text-xs bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                      >
+                        {nombre}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Configuración de Umbrales */}
+                <div className="bg-white p-3 rounded-lg border border-gray-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-sm font-medium text-gray-700">
+                      Umbrales del Semáforo
+                    </label>
+                    <select
+                      value={formData.configuracionPersonalizada?.semaforoPersonalizado?.unidad || 'HORAS'}
+                      onChange={(e) => handleSemaforoPersonalizadoChange('unidad', e.target.value)}
+                      className="text-xs px-2 py-1 border border-gray-300 rounded"
+                    >
+                      <option value="HORAS">Horas</option>
+                      <option value="PORCENTAJE">Porcentaje</option>
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    {['morado', 'rojo', 'naranja', 'amarillo', 'verde'].map(color => (
+                      <div key={color} className="space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <div 
+                            className="w-4 h-4 rounded-full"
+                            style={{ backgroundColor: COLORES_CSS[color.toUpperCase() as keyof typeof COLORES_CSS] }}
+                          />
+                          <label className="text-xs font-medium text-gray-700 capitalize">
+                            {color}
+                          </label>
+                        </div>
+                        <input
+                          type="number"
+                          min="0"
+                          max={formData.configuracionPersonalizada?.semaforoPersonalizado?.unidad === 'PORCENTAJE' ? 100 : undefined}
+                          value={formData.configuracionPersonalizada?.semaforoPersonalizado?.umbrales?.[color as keyof typeof formData.configuracionPersonalizada.semaforoPersonalizado.umbrales] || 0}
+                          onChange={(e) => handleUmbralesPersonalizadoChange(color as any, parseInt(e.target.value) || 0)}
+                          className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-green-500 focus:border-green-500"
+                          placeholder="0"
+                        />
+                        <input
+                          type="text"
+                          value={formData.configuracionPersonalizada?.semaforoPersonalizado?.descripciones?.[color as keyof typeof formData.configuracionPersonalizada.semaforoPersonalizado.descripciones] || ''}
+                          onChange={(e) => handleDescripcionPersonalizadaChange(color as any, e.target.value)}
+                          className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-green-500 focus:border-green-500"
+                          placeholder={`Descripción ${color}...`}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="mt-3 p-2 bg-purple-50 rounded text-xs text-purple-800">
+                    <strong>Nuevo:</strong> MORADO = Estado sobre-crítico (componente excede el límite y sigue en uso). 
+                    <br />
+                    <strong>Tip:</strong> Para horas: Mayor valor = más anticipada la alerta. 
+                    Para porcentaje: Mayor valor = más cerca del límite.
+                  </div>
+                </div>
+
+                {/* Preview del Semáforo Simple */}
+                <SemaforoPreview 
+                  configuracion={formData.configuracionPersonalizada?.semaforoPersonalizado!}
+                  intervaloOverhaul={formData.valorLimite}
+                />
+              </div>
+
+              {/* Paro de Aeronave */}
+              <div className="mt-4">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={formData.configuracionPersonalizada?.requiereParoAeronave || false}
+                    onChange={(e) => handleConfiguracionChange('requiereParoAeronave', e.target.checked)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">
+                    Requiere paro de aeronave para mantenimiento
+                  </span>
+                </label>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Configuración de Overhauls */}
           <div className="border-t pt-4">
@@ -468,6 +813,138 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
                   </div>
                 )}
 
+                {/* ===== CONFIGURACIÓN DE ALERTAS PARA OVERHAULS ===== */}
+                <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg border border-blue-200">
+                  <h4 className="text-sm font-medium text-blue-800 mb-3 flex items-center">
+                    <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    Sistema de Alertas para Overhauls
+                  </h4>
+
+                  {/* Selector de tipo de sistema */}
+                  <div className="mb-4 p-3 bg-white rounded-lg border border-gray-200">
+                    <label className="flex items-center mb-2">
+                      <input
+                        type="checkbox"
+                        checked={formData.configuracionOverhaul?.semaforoPersonalizado?.habilitado || false}
+                        onChange={(e) => handleSemaforoChange('habilitado', e.target.checked)}
+                        className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                      />
+                      <span className="ml-2 text-sm font-medium text-gray-700">
+                        🚦 Usar Sistema de Semáforo Personalizable
+                      </span>
+                    </label>
+                    <p className="text-xs text-gray-500 ml-6">
+                      {formData.configuracionOverhaul?.semaforoPersonalizado?.habilitado 
+                        ? "Sistema avanzado con 4 colores y umbrales personalizables" 
+                        : "Sistema básico con alerta anticipada simple"
+                      }
+                    </p>
+                  </div>
+
+                  {/* Sistema de Semáforo Personalizable */}
+                  {formData.configuracionOverhaul?.semaforoPersonalizado?.habilitado && (
+                    <div className="space-y-4">
+                      {/* Configuraciones Predefinidas */}
+                      <div className="bg-white p-3 rounded-lg border border-gray-200">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Configuraciones Predefinidas
+                        </label>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          {Object.keys(CONFIGURACIONES_SEMAFORO_PREDEFINIDAS).map(nombre => (
+                            <button
+                              key={nombre}
+                              type="button"
+                              onClick={() => aplicarConfiguracionPredefinida(nombre)}
+                              className="px-3 py-2 text-xs bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                            >
+                              {nombre}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Configuración de Umbrales */}
+                      <div className="bg-white p-3 rounded-lg border border-gray-200">
+                        <div className="flex items-center justify-between mb-3">
+                          <label className="text-sm font-medium text-gray-700">
+                            Umbrales del Semáforo
+                          </label>
+                          <select
+                            value={formData.configuracionOverhaul?.semaforoPersonalizado?.unidad || 'HORAS'}
+                            onChange={(e) => handleSemaforoChange('unidad', e.target.value)}
+                            className="text-xs px-2 py-1 border border-gray-300 rounded"
+                          >
+                            <option value="HORAS">Horas</option>
+                            <option value="PORCENTAJE">Porcentaje</option>
+                          </select>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                          {['morado', 'rojo', 'naranja', 'amarillo', 'verde'].map(color => (
+                            <div key={color} className="space-y-2">
+                              <div className="flex items-center space-x-2">
+                                <div 
+                                  className="w-4 h-4 rounded-full"
+                                  style={{ backgroundColor: COLORES_CSS[color.toUpperCase() as keyof typeof COLORES_CSS] }}
+                                />
+                                <label className="text-xs font-medium text-gray-700 capitalize">
+                                  {color}
+                                </label>
+                              </div>
+                              <input
+                                type="number"
+                                min="0"
+                                max={formData.configuracionOverhaul?.semaforoPersonalizado?.unidad === 'PORCENTAJE' ? 100 : undefined}
+                                value={formData.configuracionOverhaul?.semaforoPersonalizado?.umbrales[color as keyof typeof formData.configuracionOverhaul.semaforoPersonalizado.umbrales] || 0}
+                                onChange={(e) => handleUmbralesChange(color as any, parseInt(e.target.value) || 0)}
+                                className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-purple-500 focus:border-purple-500"
+                                placeholder="0"
+                              />
+                              <input
+                                type="text"
+                                value={formData.configuracionOverhaul?.semaforoPersonalizado?.descripciones?.[color as keyof typeof formData.configuracionOverhaul.semaforoPersonalizado.descripciones] || ''}
+                                onChange={(e) => handleDescripcionChange(color as any, e.target.value)}
+                                className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-purple-500 focus:border-purple-500"
+                                placeholder={`Descripción ${color}...`}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        
+                        <div className="mt-3 p-2 bg-purple-50 rounded text-xs text-purple-800">
+                          <strong>🟣 MORADO:</strong> Estado sobre-crítico cuando el componente excede el límite y sigue operando.
+                          <br />
+                          <strong>Tip:</strong> Para horas: Mayor valor = más anticipada la alerta. 
+                          Para porcentaje: Mayor valor = más cerca del límite.
+                        </div>
+                      </div>
+
+                      {/* Preview del Semáforo */}
+                      <SemaforoPreview 
+                        configuracion={formData.configuracionOverhaul?.semaforoPersonalizado!}
+                        intervaloOverhaul={formData.configuracionOverhaul?.intervaloOverhaul || 500}
+                      />
+                    </div>
+                  )}
+
+                  {/* Paro de Aeronave */}
+                  <div className="mt-3">
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={formData.configuracionOverhaul?.requiereParoAeronave || false}
+                        onChange={(e) => handleOverhaulChange('requiereParoAeronave', e.target.checked)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <span className="ml-2 text-sm text-gray-700">
+                        El overhaul requiere paro de aeronave
+                      </span>
+                    </label>
+                  </div>
+                </div>
+                
                 {/* Observaciones de overhaul */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
