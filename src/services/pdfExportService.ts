@@ -38,6 +38,7 @@ interface EstadoMonitoreo {
   valorActual: number;
   valorLimite: number;
   unidad: string;
+  estado?: 'OK' | 'PROXIMO' | 'VENCIDO' | 'OVERHAUL_REQUERIDO';  // ✅ Agregar campo estado
   semaforo?: {
     color: string;
     nivel: number;
@@ -48,6 +49,7 @@ interface EstadoMonitoreo {
     habilitarOverhaul?: boolean; // Nueva propiedad
     intervaloOverhaul: number;
     horasUltimoOverhaul: number;
+    requiereOverhaul?: boolean;  // ✅ Flag de overhaul requerido
   };
 }
 
@@ -91,18 +93,6 @@ const SEMAFORO_COLORES: Record<string, string> = {
 
 export const exportarComponentesPDF = (datos: DatosReporte): void => {
   try {
-    console.log('📄 [PDF] Iniciando generación de PDF con datos:', {
-      aeronave: datos.aeronave.matricula,
-      totalComponentes: datos.componentes.length,
-      componentesConEstados: datos.componentes.filter(c => c.estadosMonitoreo && c.estadosMonitoreo.length > 0).length,
-      detalleComponentes: datos.componentes.map(c => ({
-        nombre: c.nombre,
-        serie: c.numeroSerie,
-        estadosCount: c.estadosMonitoreo?.length || 0,
-        estados: c.estadosMonitoreo?.map(e => e.catalogoControlId?.descripcionCodigo || e.catalogoControlId?.nombre || 'N/A') || []
-      }))
-    });
-    
     // Crear documento PDF (A4, vertical)
     const doc = new jsPDF('p', 'mm', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -130,9 +120,8 @@ export const exportarComponentesPDF = (datos: DatosReporte): void => {
     const nombreArchivo = `Reporte_Componentes_${datos.aeronave.matricula}_${formatearFecha(datos.fecha)}.pdf`;
     doc.save(nombreArchivo);
     
-    console.log('✅ PDF generado exitosamente:', nombreArchivo);
   } catch (error) {
-    console.error('❌ Error al generar PDF:', error);
+    console.error('Error al generar PDF:', error);
     throw new Error('No se pudo generar el reporte PDF');
   }
 };
@@ -352,6 +341,21 @@ const generarDetalleComponentes = (
         
         const porcentaje = ((estado.valorActual / estado.valorLimite) * 100).toFixed(1);
         
+        // ✅ Determinar estado textual (Overhaul Requerido, Próximo, etc.)
+        let estadoTexto = '-';
+        if (estado.configuracionOverhaul?.requiereOverhaul || estado.estado === 'OVERHAUL_REQUERIDO') {
+          estadoTexto = 'Overhaul Requerido';
+        } else if (estado.estado === 'VENCIDO') {
+          estadoTexto = 'Vencido';
+        } else if (estado.estado === 'PROXIMO') {
+          estadoTexto = 'Próximo';
+        } else if (estado.estado === 'OK') {
+          estadoTexto = 'OK';
+        } else if (estado.semaforo) {
+          // Fallback al color del semáforo si no hay estado textual
+          estadoTexto = formatearSemaforo(estado.semaforo.color);
+        }
+        
         // Determinar acción recomendada
         let accion = 'OK';
         if (estado.semaforo) {
@@ -366,7 +370,7 @@ const generarDetalleComponentes = (
           estado.catalogoControlId?.descripcionCodigo || estado.catalogoControlId?.nombre || 'N/A',
           `${estado.valorActual.toFixed(2)}h / ${estado.valorLimite.toFixed(2)}h`,
           `${porcentaje}%`,
-          estado.semaforo ? formatearSemaforo(estado.semaforo.color) : '-',
+          estadoTexto,  // ✅ Usar estado textual en lugar de semáforo
           `${horasRestantes.toFixed(2)}h`,
           overhaulHabilitado ? `${tso.toFixed(2)}h` : 'N/A',
           accion
@@ -393,39 +397,61 @@ const generarDetalleComponentes = (
           fillColor: COLORES.light,
         },
         columnStyles: {
-          0: { cellWidth: 35 },
-          1: { cellWidth: 30, halign: 'center' },
-          2: { cellWidth: 15, halign: 'center' },
-          3: { cellWidth: 20, halign: 'center' },
-          4: { cellWidth: 22, halign: 'center' },
-          5: { cellWidth: 20, halign: 'center' },
-          6: { cellWidth: 28, halign: 'center' },
+          0: { cellWidth: 32 },  // Control (reducido un poco)
+          1: { cellWidth: 28, halign: 'center' },  // Progreso (reducido)
+          2: { cellWidth: 12, halign: 'center' },  // % (reducido)
+          3: { cellWidth: 32, halign: 'center', fontSize: 7 },  // ✅ Estado (ampliado para "Overhaul Requerido")
+          4: { cellWidth: 20, halign: 'center' },  // Restantes (reducido)
+          5: { cellWidth: 18, halign: 'center' },  // TSO (reducido)
+          6: { cellWidth: 28, halign: 'center' },  // Acción
         },
         margin: { left: 14, right: 14 },
         didDrawCell: (data: any) => {
-          // Colorear columna de estado según semáforo
+          // ✅ Colorear columna de estado según estado/semáforo
           if (data.column.index === 3 && data.section === 'body') {
             const estado = componente.estadosMonitoreo![data.row.index];
-            if (estado.semaforo) {
-              const color = SEMAFORO_COLORES[estado.semaforo.color] || COLORES.secondary;
-              doc.setFillColor(color);
-              doc.rect(
-                data.cell.x + 1,
-                data.cell.y + 1,
-                data.cell.width - 2,
-                data.cell.height - 2,
-                'F'
-              );
-              doc.setTextColor(255, 255, 255);
-              doc.setFontSize(8);
-              doc.setFont('helvetica', 'bold');
-              doc.text(
-                formatearSemaforo(estado.semaforo.color),
-                data.cell.x + data.cell.width / 2,
-                data.cell.y + data.cell.height / 2 + 1,
-                { align: 'center' }
-              );
+            
+            // Determinar color basándose en estado o semáforo
+            let bgColor = COLORES.light;
+            let textColor = COLORES.dark;
+            
+            if (estado.configuracionOverhaul?.requiereOverhaul || estado.estado === 'OVERHAUL_REQUERIDO') {
+              bgColor = COLORES.danger;
+              textColor = '#ffffff';
+            } else if (estado.estado === 'VENCIDO') {
+              bgColor = COLORES.purple;
+              textColor = '#ffffff';
+            } else if (estado.estado === 'PROXIMO') {
+              bgColor = COLORES.warning;
+              textColor = '#ffffff';
+            } else if (estado.semaforo) {
+              bgColor = SEMAFORO_COLORES[estado.semaforo.color] || COLORES.secondary;
+              textColor = '#ffffff';
             }
+            
+            // Dibujar fondo de color
+            doc.setFillColor(bgColor);
+            doc.rect(
+              data.cell.x + 1,
+              data.cell.y + 1,
+              data.cell.width - 2,
+              data.cell.height - 2,
+              'F'
+            );
+            
+            // Dibujar texto del estado
+            doc.setTextColor(textColor);
+            doc.setFontSize(7);
+            doc.setFont('helvetica', 'bold');
+            
+            // El texto ya está en data.cell.text, solo necesitamos dibujarlo
+            const lines = doc.splitTextToSize(data.cell.text, data.cell.width - 2);
+            doc.text(
+              lines,
+              data.cell.x + data.cell.width / 2,
+              data.cell.y + data.cell.height / 2 + 1,
+              { align: 'center', baseline: 'middle' }
+            );
           }
           
           // Colorear columna de acción según criticidad

@@ -14,7 +14,7 @@ import { eliminarAeronave } from '../utils/inventarioApi';
 import { IAeronave } from '../types/inventario';
 
 const GestionInventario: React.FC = () => {
-  // Hooks personalizados
+  // ROLLBACK TEMPORAL: Usar hook original mientras solucionamos el cache
   const navigate = useNavigate();
   const { aeronaves, estadisticas, loading, error, refrescarDatos } = useInventario();
   const formulario = useFormularioAeronave(refrescarDatos);

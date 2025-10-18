@@ -35,7 +35,6 @@ export const useCurrentUser = () => {
         const cached = getPermissionsFromCache();
 
         if (cached) {
-          console.log('⚡ Cargando permisos desde caché');
           setCurrentUser(cached.user);
           setPermissions(cached.permissions);
           setUserRole(cached.user.role);

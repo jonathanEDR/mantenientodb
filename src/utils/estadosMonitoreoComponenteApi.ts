@@ -68,8 +68,6 @@ export const obtenerEstadosMonitoreoPorAeronave = async (aeronaveId: string) => 
       estadosPorComponente[componenteId] = estados;
     });
 
-    console.log(`✅ [API] Cargados estados de ${componentes.length} componentes en 1 batch`);
-
     return {
       success: true,
       data: estadosPorComponente
@@ -276,12 +274,12 @@ export const filtrarEstados = (
       return false;
     }
 
-    // Filtro por criticidad
-    if (filtros.criticidad && 
-        filtros.criticidad !== 'TODAS' && 
-        estado.configuracionPersonalizada?.criticidad !== filtros.criticidad) {
-      return false;
-    }
+    // Filtro por criticidad - TODO: Implementar cuando se agregue criticidad al modelo
+    // if (filtros.criticidad && 
+    //     filtros.criticidad !== 'TODAS' && 
+    //     estado.configuracionPersonalizada?.criticidad !== filtros.criticidad) {
+    //   return false;
+    // }
 
     // Filtro por unidad
     if (filtros.unidad && filtros.unidad !== 'TODAS' && estado.unidad !== filtros.unidad) {

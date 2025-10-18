@@ -46,9 +46,7 @@ axiosRetry(axiosInstance, {
            (error.response?.status ? error.response.status >= 500 : false);
   },
   onRetry: (retryCount, error, requestConfig) => {
-    if ((import.meta as any).env.DEV) {
-      console.log(`🔄 [AxiosConfig] Reintento ${retryCount}/2: ${requestConfig.url}`);
-    }
+    // Logs removidos para reducir ruido
   }
 });
 
@@ -56,10 +54,7 @@ axiosRetry(axiosInstance, {
 axiosInstance.interceptors.request.use(
   async (config) => {
     try {
-      // Logging reducido - solo en desarrollo
-      if ((import.meta as any).env.DEV) {
-        console.log(`� ${config.method?.toUpperCase()} ${config.url}`);
-      }
+      // Logs removidos para reducir ruido
       
       if (globalGetToken) {
         const token = await globalGetToken();
@@ -86,10 +81,7 @@ axiosInstance.interceptors.request.use(
 // Response interceptor - manejar errores de autenticación
 axiosInstance.interceptors.response.use(
   (response) => {
-    // Logging mínimo solo en desarrollo
-    if ((import.meta as any).env.DEV) {
-      console.log(`✅ ${response.config.url} (${response.status})`);
-    }
+    // Logs removidos para reducir ruido
     return response;
   },
   async (error) => {

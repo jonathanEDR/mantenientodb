@@ -68,12 +68,7 @@ export const getPermissionsFromCache = (): PermissionsCacheData | null => {
       return null;
     }
 
-    console.log('✅ Permisos obtenidos de caché:', {
-      user: cacheData.user.email,
-      role: cacheData.user.role,
-      age: Math.round(age / 1000) + ' segundos',
-      remainingTime: Math.round((CACHE_TTL - age) / 1000 / 60) + ' minutos'
-    });
+    // Permisos desde caché
 
     return cacheData;
   } catch (error) {

@@ -7,6 +7,7 @@ import { useCatalogoComponentes } from '../../hooks/useCatalogoComponentes';
 import axiosInstance from '../../utils/axiosConfig';
 import { usePermissions } from '../../hooks/useRoles';
 import { exportarComponentesPDF, calcularEstadisticasReporte } from '../../services/pdfExportService';
+import { combinarComponentesConEstados } from '../../services/estadosMonitoreoBatchService';  // ✅ Servicio optimizado
 
 interface ComponentesAeronaveProps {
   aeronave: IAeronave;
@@ -165,17 +166,6 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
       // Log estratégico para gestión de horas
       const horasData = dataToSend.vidaUtil?.find(v => v.unidad === 'HORAS');
       const ciclosData = dataToSend.vidaUtil?.find(v => v.unidad === 'CICLOS');
-      
-      console.log('💾 [HORAS] Guardando componente:', {
-        operacion: componenteEditando ? 'ACTUALIZAR' : 'CREAR',
-        nombre: dataToSend.nombre,
-        numeroSerie: dataToSend.numeroSerie,
-        aeronave: aeronave.matricula,
-        horasAcumuladas: horasData?.acumulado || 0,
-        horasLimite: horasData?.limite || 0,
-        ciclosAcumulados: ciclosData?.acumulado || 0,
-        ciclosLimite: ciclosData?.limite || 0
-      });
 
       let nuevoComponente: IComponente;
 
@@ -207,23 +197,12 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
   };
 
   const abrirHistorial = (componente: IComponente, tabDefault?: 'info' | 'estado' | 'observaciones' | 'historial' | 'monitoreo') => {
-    // Log estratégico para gestión de horas
-    console.log('📅 [HORAS] Abriendo historial de componente:', {
-      nombre: componente.nombre,
-      numeroSerie: componente.numeroSerie,
-      horasAcumuladas: componente.vidaUtil?.find(v => v.unidad === 'HORAS')?.acumulado || 0,
-      ultimaInspeccion: componente.proximaInspeccion || 'No programada'
-    });
     setTabInicial(tabDefault || 'info');
     setComponenteHistorial(componente);
     setHistorialAbierto(true);
   };
 
   const abrirMonitoreo = (componente: IComponente) => {
-    console.log('📊 [MONITOREO] Abriendo monitoreo de componente:', {
-      nombre: componente.nombre,
-      numeroSerie: componente.numeroSerie,
-    });
     // Abrir historial con tab de monitoreo activo
     abrirHistorial(componente, 'monitoreo');
   };
@@ -245,7 +224,6 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
       // Eliminar del estado local sin recargar todo
       setComponentes(prev => prev.filter(c => c._id !== id));
 
-      console.log('✅ Componente eliminado del estado local');
     } catch (error: any) {
       console.error('Error al eliminar componente:', error);
       alert('Error al eliminar el componente');
@@ -257,27 +235,8 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
     try {
       setLoading(true);
       
-      // Cargar estados de monitoreo para todos los componentes
-      const componentesConEstados = await Promise.all(
-        componentes.map(async (componente) => {
-          try {
-            const url = `/mantenimiento/estados-monitoreo-componente/componente/${componente._id}`;
-            const response = await axiosInstance.get(url);
-            const estados = response.data.data || [];
-            
-            return {
-              ...componente,
-              estadosMonitoreo: estados
-            };
-          } catch (error) {
-            console.error(`❌ [PDF] Error para componente ${componente.numeroSerie}:`, error);
-            return {
-              ...componente,
-              estadosMonitoreo: []
-            };
-          }
-        })
-      );
+      // ✅ OPTIMIZACIÓN: Cargar todos los estados en UNA sola petición batch
+      const componentesConEstados = await combinarComponentesConEstados(componentes);
 
       // Calcular estadísticas
       const estadisticas = calcularEstadisticasReporte(componentesConEstados);
@@ -300,7 +259,7 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
       exportarComponentesPDF(datosReporte);
 
     } catch (error) {
-      console.error('❌ Error al exportar PDF:', error);
+      console.error('Error al exportar PDF:', error);
       alert('Error al generar el reporte PDF. Por favor intente nuevamente.');
     } finally {
       setLoading(false);
@@ -711,13 +670,7 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
         </div>
 
         {/* Modal de Crear/Editar Componente para vista in-place */}
-        {(() => {
-          console.log('🔍 [IN-PLACE] Verificando si mostrar modal ComponenteModal:', { 
-            modalComponenteAbierto, 
-            componenteEditando: componenteEditando?.nombre || null 
-          });
-          return modalComponenteAbierto;
-        })() && (
+        {modalComponenteAbierto && (
           <ComponenteModal
             isOpen={modalComponenteAbierto}
             componente={componenteEditando}
@@ -927,13 +880,7 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
         </div>
 
         {/* Modal de Crear/Editar Componente */}
-        {(() => {
-          console.log('🔍 Verificando si mostrar modal ComponenteModal:', { 
-            modalComponenteAbierto, 
-            componenteEditando: componenteEditando?.nombre || null 
-          });
-          return modalComponenteAbierto;
-        })() && (
+        {modalComponenteAbierto && (
           <ComponenteModal
             isOpen={modalComponenteAbierto}
             componente={componenteEditando}

@@ -1,8 +1,8 @@
 /**
- * HOOK PARA CÁLCULO DE SEMÁFORO EN FRONTEND
+ * ===== HOOK PARA CÁLCULO DE SEMÁFORO (NUEVA LÓGICA) =====
  * 
- * Permite calcular el estado del semáforo basándose en configuración local,
- * útil para preview en tiempo real mientras se configuran los umbrales.
+ * Calcula el estado del semáforo basándose en HORAS ACUMULADAS (TSO)
+ * Útil para preview en tiempo real mientras se configuran los umbrales
  */
 
 import { useMemo } from 'react';
@@ -14,7 +14,7 @@ import {
 } from '../types/semaforoPersonalizado';
 
 interface UseSemaforoParams {
-  horasRestantes: number;
+  horasRestantes: number;  // Mantenemos el nombre por compatibilidad, pero se usa para calcular horasAcumuladas
   intervaloOverhaul: number;
   configuracion: ISemaforoPersonalizado;
 }
@@ -25,7 +25,6 @@ export const useSemaforo = ({ horasRestantes, intervaloOverhaul, configuracion }
     // Validar configuración
     const errores = validarUmbrales(configuracion.umbrales, configuracion.unidad);
     if (errores.length > 0) {
-      // Configuración inválida, retornar estado neutral
       return {
         color: 'VERDE',
         descripcion: 'Configuración inválida',
@@ -37,75 +36,59 @@ export const useSemaforo = ({ horasRestantes, intervaloOverhaul, configuracion }
       };
     }
 
-    const { umbrales, unidad, descripciones } = configuracion;
+    const { umbrales, descripciones } = configuracion;
     
-    // Convertir a valor comparable según unidad
-    let valorComparacion: number;
-    let porcentajeProgreso: number;
+    // ===== NUEVA LÓGICA: CALCULAR BASADO EN HORAS ACUMULADAS =====
+    // Convertir horasRestantes a horasAcumuladas
+    const horasAcumuladas = intervaloOverhaul - horasRestantes;
+    const porcentajeProgreso = Math.min(100, Math.max(0, (horasAcumuladas / intervaloOverhaul) * 100));
     
-    if (unidad === 'PORCENTAJE') {
-      // Calcular porcentaje del intervalo consumido
-      const horasConsumidas = intervaloOverhaul - horasRestantes;
-      porcentajeProgreso = Math.max(0, Math.min(100, (horasConsumidas / intervaloOverhaul) * 100));
-      valorComparacion = porcentajeProgreso;
-    } else {
-      // Usar horas directamente
-      valorComparacion = horasRestantes;
-      const horasConsumidas = intervaloOverhaul - horasRestantes;
-      porcentajeProgreso = Math.max(0, Math.min(100, (horasConsumidas / intervaloOverhaul) * 100));
-    }
+    const umbralMorado = umbrales.morado || 0;
+    const umbralRojo = umbrales.rojo || 0;
+    const umbralNaranja = umbrales.naranja || 0;
+    const umbralAmarillo = umbrales.amarillo || 0;
 
-    // Determinar color según umbrales
     let color: ColorSemaforo;
     let umbralActual: number;
     let nivel: number;
     
-    if (unidad === 'PORCENTAJE') {
-      // Para porcentaje, mayor porcentaje = más crítico
-      if (valorComparacion >= umbrales.rojo) {
-        color = 'ROJO';
-        umbralActual = umbrales.rojo;
-        nivel = 1;
-      } else if (valorComparacion >= umbrales.naranja) {
-        color = 'NARANJA';
-        umbralActual = umbrales.naranja;
-        nivel = 2;
-      } else if (valorComparacion >= umbrales.amarillo) {
-        color = 'AMARILLO';
-        umbralActual = umbrales.amarillo;
-        nivel = 3;
-      } else {
-        color = 'VERDE';
-        umbralActual = umbrales.verde;
-        nivel = 4;
-      }
-    } else {
-      // Para horas: menos horas restantes = más crítico
-      if (horasRestantes >= umbrales.rojo) {
-        color = 'VERDE';
-        umbralActual = umbrales.rojo;
-        nivel = 4;
-      } else if (horasRestantes >= umbrales.naranja) {
-        color = 'AMARILLO';
-        umbralActual = umbrales.naranja;
-        nivel = 3;
-      } else if (horasRestantes >= umbrales.amarillo) {
-        color = 'NARANJA';
-        umbralActual = umbrales.amarillo;
-        nivel = 2;
-      } else {
-        color = 'ROJO';
-        umbralActual = umbrales.verde;
-        nivel = 1;
-      }
+    // 🟣 MORADO: Excedió el límite + tolerancia
+    if (horasAcumuladas >= intervaloOverhaul + umbralMorado) {
+      color = 'MORADO';
+      umbralActual = intervaloOverhaul + umbralMorado;
+      nivel = 0;
+    }
+    // 🔴 ROJO: Llegó al umbral rojo
+    else if (horasAcumuladas >= umbralRojo) {
+      color = 'ROJO';
+      umbralActual = umbralRojo;
+      nivel = 1;
+    }
+    // 🟠 NARANJA: Llegó al umbral naranja
+    else if (horasAcumuladas >= umbralNaranja) {
+      color = 'NARANJA';
+      umbralActual = umbralNaranja;
+      nivel = 2;
+    }
+    // 🟡 AMARILLO: Llegó al umbral amarillo
+    else if (horasAcumuladas >= umbralAmarillo) {
+      color = 'AMARILLO';
+      umbralActual = umbralAmarillo;
+      nivel = 3;
+    }
+    // 🟢 VERDE: Aún está en rango seguro
+    else {
+      color = 'VERDE';
+      umbralActual = umbralAmarillo;
+      nivel = 4;
     }
 
     // Obtener descripción
     const descripcion = descripciones?.[color.toLowerCase() as keyof typeof descripciones] || 
                       `Estado ${color}`;
 
-    // Determinar si requiere atención (colores críticos)
-    const requiereAtencion = color === 'ROJO' || color === 'NARANJA';
+    // Determinar si requiere atención
+    const requiereAtencion = color === 'ROJO' || color === 'NARANJA' || color === 'MORADO';
 
     return {
       color,

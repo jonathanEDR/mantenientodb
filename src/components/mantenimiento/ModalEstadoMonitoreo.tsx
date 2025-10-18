@@ -126,9 +126,9 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
     basadoEnAeronave: true, // Por defecto usar horas de aeronave
     offsetInicial: 0,
     configuracionOverhaul: {
-      habilitarOverhaul: false,
-      intervaloOverhaul: 500,
-      ciclosOverhaul: 5,
+      habilitarOverhaul: true, // ✅ Habilitado por defecto
+      intervaloOverhaul: 100, // Se calculará automáticamente
+      ciclosOverhaul: 1, // ✅ Por defecto 1 ciclo
       cicloActual: 0,
       horasUltimoOverhaul: 0,
       proximoOverhaulEn: 500,
@@ -272,9 +272,9 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
         basadoEnAeronave: true,
         offsetInicial: 0,
         configuracionOverhaul: {
-          habilitarOverhaul: false,
-          intervaloOverhaul: 500,
-          ciclosOverhaul: 5,
+          habilitarOverhaul: true, // ✅ Habilitado por defecto al resetear
+          intervaloOverhaul: 100, // Se calculará automáticamente
+          ciclosOverhaul: 1, // ✅ Por defecto 1 ciclo
           cicloActual: 0,
           horasUltimoOverhaul: 0,
           proximoOverhaulEn: 500,
@@ -340,9 +340,19 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
         const offsetInicial = horasAeronave; // Usar las horas actuales como offset inicial
         const valorActual = Math.max(0, horasAeronave - catalogoSeleccionado.horaInicial);
         
-        // ===== CALCULAR UMBRALES AUTOMÁTICOS BASÁNDOSE EN EL LÍMITE =====
-        // Usar configuración PORCENTAJE como base (se adapta mejor a cualquier límite)
-        const semaforoAjustado = calcularUmbralesAutomaticos(
+        // ===== CALCULAR VALORES PARA OVERHAULS =====
+        const ciclosInicial = 1; // Empezar con 1 ciclo por defecto
+        const intervaloOverhaulInicial = rangoIntervalo / ciclosInicial; // Horas entre overhauls
+        
+        // ===== CALCULAR UMBRALES BASÁNDOSE EN HORAS ENTRE OVERHAULS =====
+        // Usar las "Horas entre Overhauls" como base para el semáforo
+        const semaforoAjustadoOverhaul = calcularUmbralesAutomaticos(
+          intervaloOverhaulInicial,
+          CONFIGURACIONES_SEMAFORO_PREDEFINIDAS.PORCENTAJE
+        );
+        
+        // Para configuración sin overhaul, usar el límite total
+        const semaforoAjustadoGeneral = calcularUmbralesAutomaticos(
           rangoIntervalo,
           CONFIGURACIONES_SEMAFORO_PREDEFINIDAS.PORCENTAJE
         );
@@ -358,13 +368,14 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
           // Actualizar semáforo para estados sin overhaul
           configuracionPersonalizada: {
             ...prev.configuracionPersonalizada!,
-            semaforoPersonalizado: semaforoAjustado
+            semaforoPersonalizado: semaforoAjustadoGeneral
           },
           // Actualizar semáforo para estados con overhaul
           configuracionOverhaul: {
             ...prev.configuracionOverhaul!,
-            intervaloOverhaul: rangoIntervalo, // Ajustar intervalo al límite del catálogo
-            semaforoPersonalizado: semaforoAjustado
+            ciclosOverhaul: ciclosInicial, // ✅ Iniciar con 1 ciclo
+            intervaloOverhaul: intervaloOverhaulInicial, // ✅ Calcular: Límite Total / Ciclos
+            semaforoPersonalizado: semaforoAjustadoOverhaul // ✅ Basado en horas entre overhauls
           }
         }));
       }
@@ -380,13 +391,43 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
   };
 
   const handleOverhaulChange = (campo: keyof IConfiguracionOverhaul, valor: any) => {
-    setFormData(prev => ({
-      ...prev,
-      configuracionOverhaul: {
-        ...prev.configuracionOverhaul!,
-        [campo]: valor
+    setFormData(prev => {
+      // ===== CÁLCULO AUTOMÁTICO DE INTERVALO BASADO EN CICLOS =====
+      // Si el campo que cambia es 'ciclosOverhaul', recalcular 'intervaloOverhaul' y 'umbrales'
+      if (campo === 'ciclosOverhaul' && valor > 0) {
+        const valorLimiteTotal = prev.valorLimite || 100; // Límite total del control
+        const nuevoIntervalo = Math.round((valorLimiteTotal / valor) * 100) / 100; // Redondear a 2 decimales
+        
+        // ===== RECALCULAR UMBRALES BASÁNDOSE EN EL NUEVO INTERVALO =====
+        const semaforoActual = prev.configuracionOverhaul!.semaforoPersonalizado!;
+        const nuevoSemaforo = calcularUmbralesAutomaticos(
+          nuevoIntervalo,
+          semaforoActual // Mantener la configuración actual (PORCENTAJE, ESTANDAR, etc.)
+        );
+        
+        return {
+          ...prev,
+          configuracionOverhaul: {
+            ...prev.configuracionOverhaul!,
+            ciclosOverhaul: valor,
+            intervaloOverhaul: nuevoIntervalo, // ✅ Recalcular intervalo
+            semaforoPersonalizado: {
+              ...nuevoSemaforo,
+              habilitado: true // ✅ Mantener habilitado
+            }
+          }
+        };
       }
-    }));
+      
+      // Para otros campos, actualizar normalmente
+      return {
+        ...prev,
+        configuracionOverhaul: {
+          ...prev.configuracionOverhaul!,
+          [campo]: valor
+        }
+      };
+    });
   };
 
   const handleConfiguracionChange = (campo: string, valor: any) => {
@@ -449,10 +490,10 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
     const config = CONFIGURACIONES_SEMAFORO_PREDEFINIDAS[nombreConfig];
     if (config) {
       setFormData(prev => {
-        // ===== CALCULAR UMBRALES AJUSTADOS AL LÍMITE ACTUAL =====
-        // Si el límite es 105h, los umbrales se ajustan proporcionalmente
-        const limiteActual = prev.configuracionOverhaul!.intervaloOverhaul || prev.valorLimite || 100;
-        const semaforoAjustado = calcularUmbralesAutomaticos(limiteActual, config);
+        // ===== CALCULAR UMBRALES BASADOS EN HORAS ENTRE OVERHAULS =====
+        // Usar las "Horas entre Overhauls" calculadas automáticamente como base
+        const horasEntreOverhauls = prev.configuracionOverhaul!.intervaloOverhaul || 100;
+        const semaforoAjustado = calcularUmbralesAutomaticos(horasEntreOverhauls, config);
         
         return {
           ...prev,
@@ -460,7 +501,7 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
             ...prev.configuracionOverhaul!,
             semaforoPersonalizado: {
               ...semaforoAjustado,
-              habilitado: prev.configuracionOverhaul!.semaforoPersonalizado!.habilitado
+              habilitado: true // ✅ Siempre habilitado
             }
           }
         };
@@ -626,158 +667,19 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
 
 
 
-          {/* Configuración de Alertas Simples (Solo para componentes SIN overhauls) */}
-          {!formData.configuracionOverhaul?.habilitarOverhaul && (
-            <div className="border-t pt-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                <svg className="w-5 h-5 mr-2 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
-                </svg>
-                Sistema de Alertas con Semáforo
-                <span className="text-sm font-normal text-gray-500 ml-2">
-                  (Monitoreo sin overhauls programados)
-                </span>
-              </h3>
-
-              {/* Configuración del Semáforo Personalizado */}
-              <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg border border-green-200 space-y-4">
-                {/* Configuraciones Predefinidas */}
-                <div className="bg-white p-3 rounded-lg border border-gray-200">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Configuraciones Predefinidas
-                  </label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {Object.keys(CONFIGURACIONES_SEMAFORO_PREDEFINIDAS).map(nombre => (
-                      <button
-                        key={nombre}
-                        type="button"
-                        onClick={() => aplicarConfiguracionPredefinidaPersonalizada(nombre)}
-                        className="px-3 py-2 text-xs bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
-                      >
-                        {nombre}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Configuración de Umbrales */}
-                <div className="bg-white p-3 rounded-lg border border-gray-200">
-                  <div className="flex items-center justify-between mb-3">
-                    <label className="text-sm font-medium text-gray-700">
-                      Umbrales del Semáforo
-                    </label>
-                    <select
-                      value={formData.configuracionPersonalizada?.semaforoPersonalizado?.unidad || 'HORAS'}
-                      onChange={(e) => handleSemaforoPersonalizadoChange('unidad', e.target.value)}
-                      className="text-xs px-2 py-1 border border-gray-300 rounded"
-                    >
-                      <option value="HORAS">Horas</option>
-                      <option value="PORCENTAJE">Porcentaje</option>
-                    </select>
-                  </div>
-
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                    {['morado', 'rojo', 'naranja', 'amarillo', 'verde'].map(color => (
-                      <div key={color} className="space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <div 
-                            className="w-4 h-4 rounded-full"
-                            style={{ backgroundColor: COLORES_CSS[color.toUpperCase() as keyof typeof COLORES_CSS] }}
-                          />
-                          <label className="text-xs font-medium text-gray-700 capitalize">
-                            {color}
-                          </label>
-                        </div>
-                        <input
-                          type="number"
-                          min="0"
-                          max={formData.configuracionPersonalizada?.semaforoPersonalizado?.unidad === 'PORCENTAJE' ? 100 : undefined}
-                          value={formData.configuracionPersonalizada?.semaforoPersonalizado?.umbrales?.[color as keyof typeof formData.configuracionPersonalizada.semaforoPersonalizado.umbrales] || 0}
-                          onChange={(e) => handleUmbralesPersonalizadoChange(color as any, parseInt(e.target.value) || 0)}
-                          className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-green-500 focus:border-green-500"
-                          placeholder="0"
-                        />
-                        <input
-                          type="text"
-                          value={formData.configuracionPersonalizada?.semaforoPersonalizado?.descripciones?.[color as keyof typeof formData.configuracionPersonalizada.semaforoPersonalizado.descripciones] || ''}
-                          onChange={(e) => handleDescripcionPersonalizadaChange(color as any, e.target.value)}
-                          className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-green-500 focus:border-green-500"
-                          placeholder={`Descripción ${color}...`}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  
-                  <div className="mt-3 p-2 bg-purple-50 rounded text-xs text-purple-800">
-                    <strong>Nuevo:</strong> MORADO = Estado sobre-crítico (componente excede el límite y sigue en uso). 
-                    <br />
-                    <strong>Tip:</strong> Para horas: Mayor valor = más anticipada la alerta. 
-                    Para porcentaje: Mayor valor = más cerca del límite.
-                  </div>
-                </div>
-
-                {/* Preview del Semáforo Simple */}
-                <SemaforoPreview 
-                  configuracion={formData.configuracionPersonalizada?.semaforoPersonalizado!}
-                  intervaloOverhaul={formData.valorLimite}
-                />
-              </div>
-
-              {/* Paro de Aeronave */}
-              <div className="mt-4">
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.configuracionPersonalizada?.requiereParoAeronave || false}
-                    onChange={(e) => handleConfiguracionChange('requiereParoAeronave', e.target.checked)}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">
-                    Requiere paro de aeronave para mantenimiento
-                  </span>
-                </label>
-              </div>
-            </div>
-          )}
-
           {/* Configuración de Overhauls */}
           <div className="border-t pt-4">
-            <h3 className="text-sm font-medium text-gray-900 mb-4">Configuración de Overhauls</h3>
-            
-            {/* Habilitar Overhaul */}
-            <div className="mb-4">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.configuracionOverhaul?.habilitarOverhaul || false}
-                  onChange={(e) => handleOverhaulChange('habilitarOverhaul', e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <span className="ml-2 text-sm text-gray-700">
-                  Programar overhauls automáticamente
-                </span>
-              </label>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-medium text-gray-900">🔧 Configuración de Overhauls</h3>
+              <span className="text-xs text-gray-500 bg-blue-50 px-2 py-1 rounded">
+                Sistema automático de mantenimiento preventivo
+              </span>
             </div>
-
-            {formData.configuracionOverhaul?.habilitarOverhaul && (
-              <div className="space-y-4 ml-6 pl-4 border-l border-gray-200">
-                {/* Intervalo y Ciclos */}
+            
+            {/* Configuración siempre visible */}
+            <div className="space-y-4">
+                {/* Ciclos y Intervalo (orden invertido, ciclos primero) */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Horas entre Overhauls *
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={formData.configuracionOverhaul?.intervaloOverhaul || 500}
-                      onChange={(e) => handleOverhaulChange('intervaloOverhaul', parseInt(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="500"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Cada cuántas horas debe hacerse overhaul</p>
-                  </div>
-                  
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Número de Ciclos Máximos *
@@ -786,27 +688,49 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
                       type="number"
                       min="1"
                       max="20"
-                      value={formData.configuracionOverhaul?.ciclosOverhaul || 5}
+                      value={formData.configuracionOverhaul?.ciclosOverhaul || 1}
                       onChange={(e) => handleOverhaulChange('ciclosOverhaul', parseInt(e.target.value))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="5"
+                      placeholder="1"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Máximo overhauls permitidos antes de reemplazo</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Define cuántos overhauls antes de reemplazo
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                      Horas entre Overhauls *
+                      <span className="ml-2 text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
+                        Auto-calculado
+                      </span>
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={formData.configuracionOverhaul?.intervaloOverhaul || 100}
+                      disabled
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
+                      placeholder="100"
+                    />
+                    <p className="text-xs text-blue-600 mt-1">
+                      = Límite Total ({formData.valorLimite || 100}h) / Ciclos ({formData.configuracionOverhaul?.ciclosOverhaul || 1})
+                    </p>
                   </div>
                 </div>
 
                 {/* Información del ciclo actual */}
-                {formData.configuracionOverhaul?.cicloActual > 0 && (
+                {formData.configuracionOverhaul?.cicloActual && formData.configuracionOverhaul.cicloActual > 0 && (
                   <div className="bg-blue-50 p-3 rounded-lg">
                     <div className="flex items-center text-sm text-blue-800">
                       <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                       </svg>
                       <span className="font-medium">
-                        Ciclo actual: {formData.configuracionOverhaul.cicloActual} de {formData.configuracionOverhaul.ciclosOverhaul}
+                        Ciclo actual: {formData.configuracionOverhaul.cicloActual} de {formData.configuracionOverhaul.ciclosOverhaul || 5}
                       </span>
                     </div>
-                    {formData.configuracionOverhaul?.fechaUltimoOverhaul && (
+                    {formData.configuracionOverhaul.fechaUltimoOverhaul && (
                       <p className="text-sm text-blue-600 mt-1">
                         Último overhaul: {new Date(formData.configuracionOverhaul.fechaUltimoOverhaul).toLocaleDateString()}
                       </p>
@@ -820,33 +744,14 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
                     <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                     </svg>
-                    Sistema de Alertas para Overhauls
+                    🚦 Sistema de Semáforo Personalizable
                   </h4>
+                  <p className="text-xs text-gray-600 mb-4">
+                    Sistema avanzado con 5 colores y umbrales personalizables basados en las horas entre overhauls
+                  </p>
 
-                  {/* Selector de tipo de sistema */}
-                  <div className="mb-4 p-3 bg-white rounded-lg border border-gray-200">
-                    <label className="flex items-center mb-2">
-                      <input
-                        type="checkbox"
-                        checked={formData.configuracionOverhaul?.semaforoPersonalizado?.habilitado || false}
-                        onChange={(e) => handleSemaforoChange('habilitado', e.target.checked)}
-                        className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
-                      />
-                      <span className="ml-2 text-sm font-medium text-gray-700">
-                        🚦 Usar Sistema de Semáforo Personalizable
-                      </span>
-                    </label>
-                    <p className="text-xs text-gray-500 ml-6">
-                      {formData.configuracionOverhaul?.semaforoPersonalizado?.habilitado 
-                        ? "Sistema avanzado con 4 colores y umbrales personalizables" 
-                        : "Sistema básico con alerta anticipada simple"
-                      }
-                    </p>
-                  </div>
-
-                  {/* Sistema de Semáforo Personalizable */}
-                  {formData.configuracionOverhaul?.semaforoPersonalizado?.habilitado && (
-                    <div className="space-y-4">
+                  {/* Sistema de Semáforo (Siempre visible) */}
+                  <div className="space-y-4">
                       {/* Configuraciones Predefinidas */}
                       <div className="bg-white p-3 rounded-lg border border-gray-200">
                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -913,22 +818,8 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
                             </div>
                           ))}
                         </div>
-                        
-                        <div className="mt-3 p-2 bg-purple-50 rounded text-xs text-purple-800">
-                          <strong>🟣 MORADO:</strong> Estado sobre-crítico cuando el componente excede el límite y sigue operando.
-                          <br />
-                          <strong>Tip:</strong> Para horas: Mayor valor = más anticipada la alerta. 
-                          Para porcentaje: Mayor valor = más cerca del límite.
-                        </div>
                       </div>
-
-                      {/* Preview del Semáforo */}
-                      <SemaforoPreview 
-                        configuracion={formData.configuracionOverhaul?.semaforoPersonalizado!}
-                        intervaloOverhaul={formData.configuracionOverhaul?.intervaloOverhaul || 500}
-                      />
                     </div>
-                  )}
 
                   {/* Paro de Aeronave */}
                   <div className="mt-3">
@@ -945,22 +836,7 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
                     </label>
                   </div>
                 </div>
-                
-                {/* Observaciones de overhaul */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Observaciones de Overhaul
-                  </label>
-                  <textarea
-                    value={formData.configuracionOverhaul?.observacionesOverhaul || ''}
-                    onChange={(e) => handleOverhaulChange('observacionesOverhaul', e.target.value)}
-                    rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Observaciones específicas sobre los overhauls de este componente..."
-                  />
-                </div>
               </div>
-            )}
           </div>
 
           {/* Observaciones */}

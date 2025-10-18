@@ -1,32 +1,37 @@
 import { ColorSemaforo, IResultadoSemaforo, ISemaforoPersonalizado } from '../types/semaforoPersonalizado';
 
 /**
- * Calcula el color del semáforo basado en horas restantes y estado de overhaul
- * Función utilitaria para usar en componentes sin hooks
- *
- * PRIORIDADES DE CÁLCULO (sincronizada con backend):
- * 1. Si requiereOverhaul = true O estado = 'OVERHAUL_REQUERIDO' → ROJO (máxima prioridad)
- * 2. Si vencido (excedió límite + umbral morado) → MORADO
- * 3. Si horasRestantes <= 0 (alcanzó límite) → ROJO
- * 4. Si horasRestantes <= umbral.amarillo → ROJO (crítico, menos horas que amarillo)
- * 5. Si horasRestantes <= umbral.naranja → NARANJA
- * 6. Si horasRestantes <= umbral.rojo → AMARILLO
- * 7. Si horasRestantes > umbral.rojo → VERDE
- *
- * IMPORTANTE: Esta lógica está sincronizada con SemaforoCalculatorService.ts del backend
+ * ===== NUEVA LÓGICA DE SEMÁFORO SIMPLIFICADA =====
+ * 
+ * Calcula el color del semáforo basado en HORAS ACUMULADAS (TSO)
+ * 
+ * IMPORTANTE: Los umbrales representan "horas acumuladas" para activar cada color
+ * 
+ * Ejemplo con límite de 10h:
+ * - Verde (0-5h): 0h → 4h ✅ VERDE
+ * - Amarillo (5-7h): 5h → 6h ✅ AMARILLO  
+ * - Naranja (7-9h): 7h ✅ NARANJA
+ * - Rojo (9h-límite): 9h ✅ ROJO
+ * - Morado (límite+): 11h+ ✅ MORADO (excedió)
+ * 
+ * @param horasAcumuladas - Horas TSO acumuladas desde último overhaul
+ * @param intervaloOverhaul - Límite de horas para el ciclo actual
+ * @param configuracion - Configuración de umbrales del semáforo
  */
 export function calcularSemaforoSimple(
-  horasRestantes: number,
+  horasAcumuladas: number,  // ✅ Cambio: ahora recibe horas acumuladas (TSO)
   configuracion: ISemaforoPersonalizado | undefined,
   opciones?: {
+    intervaloOverhaul?: number;  // ✅ Nuevo: límite del ciclo
     requiereOverhaul?: boolean;
     estado?: 'OK' | 'PROXIMO' | 'VENCIDO' | 'OVERHAUL_REQUERIDO';
-    debug?: boolean;  // Activar logs de diagnóstico
   }
 ): IResultadoSemaforo {
 
+  const intervaloOverhaul = opciones?.intervaloOverhaul || 100;
+  const horasRestantes = intervaloOverhaul - horasAcumuladas;
+
   // ===== PRIORIDAD 1: OVERHAUL REQUERIDO =====
-  // Verificar tanto el flag requiereOverhaul como el estado OVERHAUL_REQUERIDO
   if (opciones?.requiereOverhaul === true || opciones?.estado === 'OVERHAUL_REQUERIDO') {
     return {
       color: 'ROJO',
@@ -39,11 +44,11 @@ export function calcularSemaforoSimple(
     };
   }
 
-  // Si no hay configuración de semáforo, retornar estado por defecto
+  // Si no hay configuración, retornar verde por defecto
   if (!configuracion || !configuracion.habilitado) {
     return {
       color: 'VERDE' as ColorSemaforo,
-      descripcion: 'OK',
+      descripcion: 'OK - Operación normal',
       horasRestantes,
       umbralActual: 0,
       porcentajeProgreso: 0,
@@ -53,70 +58,70 @@ export function calcularSemaforoSimple(
   }
 
   const { umbrales, descripciones } = configuracion;
-  let color: ColorSemaforo = 'VERDE';
-  let descripcion = descripciones?.verde || 'OK - Operación normal';
-  let nivel = 4;
-  let umbralActual = umbrales.verde;
-  let requiereAtencion = false;
 
-  // ===== LÓGICA DE COLORES DEL SEMÁFORO (sincronizada con backend) =====
-  // CORREGIDA para coincidir exactamente con SemaforoCalculatorService.ts
+  // ===== NUEVA LÓGICA: EVALUAR HORAS ACUMULADAS (TSO) =====
+  // Los umbrales representan "cuántas horas acumuladas" activan cada color
+  
+  const umbralMorado = umbrales.morado || 0;      // Tolerancia de exceso (ej: 1h)
+  const umbralRojo = umbrales.rojo || 0;          // Horas para rojo (ej: 9h)
+  const umbralNaranja = umbrales.naranja || 0;    // Horas para naranja (ej: 7h)
+  const umbralAmarillo = umbrales.amarillo || 0;  // Horas para amarillo (ej: 5h)
 
-  // MORADO: Componente SOBRE-CRÍTICO (excedió el límite por más del umbral morado)
-  if (horasRestantes < -umbrales.morado) {
+  let color: ColorSemaforo;
+  let descripcion: string;
+  let nivel: number;
+  let umbralActual: number;
+  let requiereAtencion: boolean;
+
+  // 🟣 MORADO: Excedió el límite + tolerancia
+  if (horasAcumuladas >= intervaloOverhaul + umbralMorado) {
     color = 'MORADO';
     descripcion = descripciones?.morado || 'SOBRE-CRÍTICO - Componente vencido en uso';
-    nivel = 0; // Máxima criticidad
-    umbralActual = -umbrales.morado;
+    nivel = 0;
+    umbralActual = intervaloOverhaul + umbralMorado;
     requiereAtencion = true;
   }
-  // ROJO: En el límite o justo pasado (horas restantes <= 0)
-  else if (horasRestantes <= 0) {
+  // 🔴 ROJO: Llegó al umbral rojo (ej: 9h de 10h)
+  else if (horasAcumuladas >= umbralRojo) {
     color = 'ROJO';
     descripcion = descripciones?.rojo || 'Crítico - Programar overhaul inmediatamente';
     nivel = 1;
-    umbralActual = 0;
+    umbralActual = umbralRojo;
     requiereAtencion = true;
   }
-  // ROJO: Crítico (restantes ≤ umbral más bajo - amarillo)
-  else if (horasRestantes <= umbrales.amarillo) {
-    color = 'ROJO';
-    descripcion = descripciones?.rojo || 'Crítico - Programar overhaul inmediatamente';
-    nivel = 1;
-    umbralActual = umbrales.amarillo;
-    requiereAtencion = true;
-  }
-  // NARANJA: Alto (entre umbral amarillo y naranja)
-  else if (horasRestantes <= umbrales.naranja) {
+  // 🟠 NARANJA: Llegó al umbral naranja (ej: 7h de 10h)
+  else if (horasAcumuladas >= umbralNaranja) {
     color = 'NARANJA';
     descripcion = descripciones?.naranja || 'Alto - Preparar overhaul próximo';
     nivel = 2;
-    umbralActual = umbrales.naranja;
+    umbralActual = umbralNaranja;
     requiereAtencion = true;
   }
-  // AMARILLO: Medio (entre umbral naranja y rojo)
-  else if (horasRestantes <= umbrales.rojo) {
+  // 🟡 AMARILLO: Llegó al umbral amarillo (ej: 5h de 10h)
+  else if (horasAcumuladas >= umbralAmarillo) {
     color = 'AMARILLO';
     descripcion = descripciones?.amarillo || 'Medio - Monitorear progreso';
     nivel = 3;
-    umbralActual = umbrales.rojo;
+    umbralActual = umbralAmarillo;
     requiereAtencion = false;
   }
-  // VERDE: OK (más horas que el umbral rojo)
+  // 🟢 VERDE: Aún está en rango seguro (< umbral amarillo)
   else {
     color = 'VERDE';
     descripcion = descripciones?.verde || 'OK - Operación normal';
     nivel = 4;
-    umbralActual = umbrales.rojo;
+    umbralActual = umbralAmarillo;
     requiereAtencion = false;
   }
+
+  const porcentajeProgreso = Math.min(100, (horasAcumuladas / intervaloOverhaul) * 100);
 
   return {
     color,
     descripcion,
     horasRestantes,
     umbralActual,
-    porcentajeProgreso: 0, // Se calcula en el componente que lo usa
+    porcentajeProgreso,
     requiereAtencion,
     nivel
   };

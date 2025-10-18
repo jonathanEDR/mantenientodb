@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { IEstadoMonitoreoComponente, IFormEstadoMonitoreo } from '../../types/estadosMonitoreoComponente';
-import { useEstadosMonitoreoSimple } from '../../hooks/useEstadosMonitoreoSimple';
+import { useEstadosMonitoreoCache } from '../../hooks/useEstadosMonitoreoCache';  // ✅ Hook optimizado con caché
 import { 
   obtenerColorEstado, 
   formatearFechaMonitoreo,
@@ -33,8 +33,9 @@ const EstadosMonitoreoComponente: React.FC<EstadosMonitoreoComponenteProps> = ({
     estados,
     loading,
     error,
-    actualizarEstados
-  } = useEstadosMonitoreoSimple(componenteId);
+    actualizarEstados,
+    invalidarCache  // ✅ Función para invalidar caché cuando sea necesario
+  } = useEstadosMonitoreoCache(componenteId);  // ✅ Usar hook optimizado
 
   // Estados para modales y filtros
   const [modalAbierto, setModalAbierto] = useState(false);
@@ -81,10 +82,9 @@ const EstadosMonitoreoComponente: React.FC<EstadosMonitoreoComponenteProps> = ({
       if (resultado.success) {
         setModalAbierto(false);
         setEstadoEditando(null);
-        // Esperar un momento antes de actualizar para asegurar que la BD se actualizó
-        setTimeout(() => {
-          actualizarEstados();
-        }, 300);
+        // ✅ Invalidar caché y recargar inmediatamente
+        invalidarCache();
+        await actualizarEstados();
         return true;
       } else {
         alert(`Error al guardar estado: ${resultado.error}`);
@@ -286,25 +286,26 @@ const EstadosMonitoreoComponente: React.FC<EstadosMonitoreoComponenteProps> = ({
                 ? estado.configuracionOverhaul.semaforoPersonalizado
                 : estado.configuracionPersonalizada?.semaforoPersonalizado;
               
-              // ===== CALCULAR SEMÁFORO CON SINCRONIZACIÓN DE OVERHAUL =====
-              // CORRECCIÓN: Ahora pasa AMBOS estado Y requiereOverhaul del backend
-              // El semáforo se calcula basado en:
-              // 1. Si requiereOverhaul = true O estado = 'OVERHAUL_REQUERIDO' → ROJO (prioridad máxima)
-              // 2. Si horasRestantes < -umbral.morado → MORADO (sobre-crítico)
-              // 3. Si horasRestantes <= 0 → ROJO (en el límite)
-              // 4. Evaluar según umbrales del semáforo (amarillo, naranja, rojo, verde)
+              // Calcular TSO (horas acumuladas desde último overhaul)
+              const tso = overhaulHabilitado ? estado.valorActual - (estado.configuracionOverhaul?.horasUltimoOverhaul || 0) : estado.valorActual;
+              
+              // ===== NUEVA LÓGICA DE SEMÁFORO: BASADA EN HORAS ACUMULADAS (TSO) =====
+              // Ahora pasa las horas acumuladas (TSO) en lugar de horas restantes
+              const intervaloParaSemaforo = overhaulHabilitado 
+                ? (estado.configuracionOverhaul?.intervaloOverhaul || estado.valorLimite)
+                : estado.valorLimite;
 
               const resultadoSemaforo = calcularSemaforoSimple(
-                horasRestantes,
+                tso,  // ✅ Pasar horas acumuladas (TSO)
                 configuracionSemaforo,
                 {
-                  estado: estado.estado,  // Pasar estado del backend
-                  requiereOverhaul: estado.configuracionOverhaul?.requiereOverhaul  // CORRECCIÓN: Pasar flag requiereOverhaul
+                  intervaloOverhaul: intervaloParaSemaforo,  // ✅ Pasar límite del ciclo
+                  estado: estado.estado,
+                  requiereOverhaul: estado.configuracionOverhaul?.requiereOverhaul
                 }
               );
               
               // Variables adicionales para la tabla
-              const tso = overhaulHabilitado ? estado.valorActual - (estado.configuracionOverhaul?.horasUltimoOverhaul || 0) : estado.valorActual;
               const tsn = estado.valorActual;
               const horasExcedidas = Math.max(0, estado.valorActual - estado.valorLimite);
               

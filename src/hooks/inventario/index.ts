@@ -71,7 +71,6 @@ export const useInventario = (initialPage = 1, initialFilters = {}) => {
       
       // 🚀 REQUEST DEDUPLICATION: Verificar si hay una petición en progreso
       if (pendingRequests.has(cacheKey)) {
-        console.log('⏳ [useInventario] Petición en progreso, reutilizando...');
         setLoading(true); // ✅ FIX: Establecer loading mientras esperamos
         const result = await pendingRequests.get(cacheKey);
         
@@ -87,7 +86,7 @@ export const useInventario = (initialPage = 1, initialFilters = {}) => {
       if (useCache) {
         const cachedEntry = inventarioCache.get(cacheKey);
         if (cachedEntry && isValidCache(cachedEntry, CACHE_TTL_AERONAVES)) {
-          console.log('📦 [useInventario] Aeronaves desde caché', { page, filters: debouncedFilters });
+          // Caché hit
           
           if (!isMountedRef.current || lastRequestRef.current !== requestId) return;
           
@@ -104,11 +103,11 @@ export const useInventario = (initialPage = 1, initialFilters = {}) => {
       // Crear promise y guardarlo en pendingRequests
       const requestPromise = obtenerAeronaves()
         .then(response => {
-          console.log('📡 [useInventario] Response recibida:', { success: response.success, dataLength: response.data?.length });
+          // Response recibida
           
           // Verificar si la petición sigue siendo válida
           if (!isMountedRef.current || lastRequestRef.current !== requestId) {
-            console.log('⚠️ [useInventario] Petición obsoleta, ignorando');
+            // Petición obsoleta
             return response;
           }
 
@@ -123,10 +122,7 @@ export const useInventario = (initialPage = 1, initialFilters = {}) => {
               filters: debouncedFilters
             });
 
-            console.log('💾 [useInventario] Aeronaves guardadas en caché', { 
-              page, 
-              count: response.data.length
-            });
+            // Guardadas en caché
           }
           
           return response;
@@ -140,10 +136,10 @@ export const useInventario = (initialPage = 1, initialFilters = {}) => {
           pendingRequests.delete(cacheKey);
           
           if (isMountedRef.current && lastRequestRef.current === requestId) {
-            console.log('✅ [useInventario] Estableciendo loading = false');
+            // Loading false
             setLoading(false);
           } else {
-            console.log('⚠️ [useInventario] No se actualiza loading (componente desmontado o petición obsoleta)');
+            // Componente desmontado
           }
         });
 
@@ -168,7 +164,7 @@ export const useInventario = (initialPage = 1, initialFilters = {}) => {
       
       // 🚀 REQUEST DEDUPLICATION: Verificar si hay una petición en progreso
       if (pendingRequests.has(cacheKey)) {
-        console.log('⏳ [useInventario] Petición de estadísticas en progreso, reutilizando...');
+        // Reutilizando petición de estadísticas
         const result = await pendingRequests.get(cacheKey);
         
         // Actualizar estado cuando la petición reutilizada termine
@@ -182,7 +178,7 @@ export const useInventario = (initialPage = 1, initialFilters = {}) => {
       if (useCache) {
         const cachedEntry = inventarioCache.get(cacheKey);
         if (cachedEntry && isValidCache(cachedEntry, CACHE_TTL_STATS)) {
-          console.log('📦 [useInventario] Estadísticas desde caché');
+          // Estadísticas desde caché
           if (isMountedRef.current) {
             setEstadisticas(cachedEntry.data.data);
           }
@@ -204,7 +200,7 @@ export const useInventario = (initialPage = 1, initialFilters = {}) => {
               timestamp: Date.now()
             });
 
-            console.log('💾 [useInventario] Estadísticas guardadas en caché');
+            // Estadísticas guardadas en caché
           }
           
           return response;
@@ -233,13 +229,13 @@ export const useInventario = (initialPage = 1, initialFilters = {}) => {
     
     // Cargar aeronaves y estadísticas en paralelo
     const loadInitialData = async () => {
-      console.log('🔄 [useInventario] Cargando datos iniciales...');
+      // Cargando datos iniciales
       try {
         await Promise.all([
           cargarAeronaves(pagination.page),
           cargarEstadisticas()
         ]);
-        console.log('✅ [useInventario] Datos iniciales cargados');
+        // Datos iniciales cargados
       } catch (error) {
         console.error('❌ [useInventario] Error cargando datos iniciales:', error);
       }
@@ -285,7 +281,7 @@ export const useInventario = (initialPage = 1, initialFilters = {}) => {
     // Limpiar cache y peticiones pendientes
     inventarioCache.clear();
     pendingRequests.clear();
-    console.log('🗑️ [useInventario] Cache y peticiones pendientes limpiados - recargando datos');
+    // Cache limpiado
     
     Promise.all([
       cargarAeronaves(pagination.page, false),
