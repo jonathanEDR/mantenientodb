@@ -30,7 +30,8 @@ interface DatosComponente {
 interface EstadoMonitoreo {
   _id: string;
   catalogoControlId: {
-    nombre: string;
+    nombre?: string;
+    descripcionCodigo?: string;
     horaInicial?: number;
     horaFinal?: number;
   };
@@ -43,7 +44,8 @@ interface EstadoMonitoreo {
     mensaje: string;
   };
   configuracionOverhaul?: {
-    activado: boolean;
+    activado?: boolean; // Mantener compatibilidad
+    habilitarOverhaul?: boolean; // Nueva propiedad
     intervaloOverhaul: number;
     horasUltimoOverhaul: number;
   };
@@ -97,7 +99,7 @@ export const exportarComponentesPDF = (datos: DatosReporte): void => {
         nombre: c.nombre,
         serie: c.numeroSerie,
         estadosCount: c.estadosMonitoreo?.length || 0,
-        estados: c.estadosMonitoreo?.map(e => e.catalogoControlId?.nombre || 'N/A') || []
+        estados: c.estadosMonitoreo?.map(e => e.catalogoControlId?.descripcionCodigo || e.catalogoControlId?.nombre || 'N/A') || []
       }))
     });
     
@@ -339,11 +341,12 @@ const generarDetalleComponentes = (
     // ========== TABLA DE ESTADOS DE MONITOREO ==========
     if (componente.estadosMonitoreo && componente.estadosMonitoreo.length > 0) {
       const estadosData = componente.estadosMonitoreo.map(estado => {
-        const tso = estado.configuracionOverhaul?.activado 
+        const overhaulHabilitado = estado.configuracionOverhaul?.habilitarOverhaul || estado.configuracionOverhaul?.activado || false;
+        const tso = overhaulHabilitado && estado.configuracionOverhaul
           ? estado.valorActual - (estado.configuracionOverhaul.horasUltimoOverhaul || 0)
           : 0;
         
-        const horasRestantes = estado.configuracionOverhaul?.activado
+        const horasRestantes = overhaulHabilitado && estado.configuracionOverhaul
           ? estado.configuracionOverhaul.intervaloOverhaul - tso
           : estado.valorLimite - estado.valorActual;
         
@@ -360,12 +363,12 @@ const generarDetalleComponentes = (
         }
         
         return [
-          estado.catalogoControlId?.nombre || 'N/A',
+          estado.catalogoControlId?.descripcionCodigo || estado.catalogoControlId?.nombre || 'N/A',
           `${estado.valorActual.toFixed(2)}h / ${estado.valorLimite.toFixed(2)}h`,
           `${porcentaje}%`,
           estado.semaforo ? formatearSemaforo(estado.semaforo.color) : '-',
           `${horasRestantes.toFixed(2)}h`,
-          estado.configuracionOverhaul?.activado ? `${tso.toFixed(2)}h` : 'N/A',
+          overhaulHabilitado ? `${tso.toFixed(2)}h` : 'N/A',
           accion
         ];
       });
@@ -482,7 +485,7 @@ const generarDetalleComponentes = (
           doc.setTextColor(COLORES.dark);
           doc.setFontSize(8);
           doc.setFont('helvetica', 'bold');
-          doc.text(`📋 ${estado.catalogoControlId?.nombre || 'Control'}:`, 18, yPosition + 5);
+          doc.text(`📋 ${estado.catalogoControlId?.descripcionCodigo || estado.catalogoControlId?.nombre || 'Control'}:`, 18, yPosition + 5);
           
           // Mensaje del semáforo
           if (estado.semaforo.mensaje) {
@@ -494,12 +497,13 @@ const generarDetalleComponentes = (
           }
           
           // Información de overhaul si está activado
-          if (estado.configuracionOverhaul?.activado) {
+          const overhaulActivado = estado.configuracionOverhaul?.habilitarOverhaul || estado.configuracionOverhaul?.activado;
+          if (overhaulActivado && estado.configuracionOverhaul) {
             const tso = estado.valorActual - (estado.configuracionOverhaul.horasUltimoOverhaul || 0);
             doc.setFontSize(7);
             doc.setTextColor(COLORES.primary);
             doc.text(
-              `🔄 Overhaul: cada ${estado.configuracionOverhaul.intervaloOverhaul}h | Último: ${estado.configuracionOverhaul.horasUltimoOverhaul.toFixed(2)}h | Desde último: ${tso.toFixed(2)}h`,
+              `🔄 Overhaul: cada ${estado.configuracionOverhaul.intervaloOverhaul}h | Último: ${(estado.configuracionOverhaul.horasUltimoOverhaul || 0).toFixed(2)}h | Desde último: ${tso.toFixed(2)}h`,
               18,
               yPosition + 15
             );

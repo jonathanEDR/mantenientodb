@@ -59,7 +59,7 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
       cargarComponentes();
       componentesYaCargados.current = true;
     }
-  }, [isOpen, aeronave._id]); // ✅ Solo cargar la primera vez que se abre
+  }, [isOpen, aeronave._id]); // Solo cargar la primera vez que se abre
 
   // Filtrar componentes cuando cambien filtros, componentes o página
   useEffect(() => {
@@ -87,11 +87,6 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
           estado: comp.estado
         }));
 
-        console.log('📊 [HORAS] Componentes cargados para aeronave:', {
-          aeronave: aeronave.matricula,
-          totalComponentes: componentesData.length,
-          resumenHoras
-        });
       }
 
       setComponentes(componentesData);
@@ -131,8 +126,6 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
     const fin = inicio + componentesPorPagina;
     const componentesPaginados = filtered.slice(inicio, fin);
     
-    console.log(`📋 [PAGINACIÓN] Página ${paginaActual}: mostrando ${componentesPaginados.length} de ${filtered.length} componentes`);
-    
     setFilteredComponentes(componentesPaginados);
     
     // Resetear página si nos quedamos sin datos
@@ -148,13 +141,6 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
   };
 
   const handleEditarComponente = (componente: IComponente) => {
-    // Log estratégico para gestión de horas
-    console.log('⚙️ [HORAS] Editando componente:', {
-      nombre: componente.nombre,
-      numeroSerie: componente.numeroSerie,
-      horasAcumuladas: componente.vidaUtil?.find(v => v.unidad === 'HORAS')?.acumulado || 0,
-      ciclosAcumulados: componente.vidaUtil?.find(v => v.unidad === 'CICLOS')?.acumulado || 0
-    });
     setComponenteEditando(componente);
     setModalComponenteAbierto(true);
   };
@@ -272,46 +258,25 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
       setLoading(true);
       
       // Cargar estados de monitoreo para todos los componentes
-      console.log('🔍 [PDF] Iniciando carga de estados para', componentes.length, 'componentes');
-      
       const componentesConEstados = await Promise.all(
         componentes.map(async (componente) => {
           try {
-            console.log(`🔍 [PDF] Cargando estados para componente: ${componente.numeroSerie}`);
-            const response = await axiosInstance.get(`/mantenimiento/estados-monitoreo-componente/componente/${componente._id}`);
-            
+            const url = `/mantenimiento/estados-monitoreo-componente/componente/${componente._id}`;
+            const response = await axiosInstance.get(url);
             const estados = response.data.data || [];
-            console.log(`📊 [PDF] Componente ${componente.numeroSerie}: ${estados.length} estados encontrados`);
-            
-            if (estados.length > 0) {
-              console.log(`📊 [PDF] Estados detalle:`, estados.map((e: any) => ({
-                control: e.catalogoControlId?.nombre || 'N/A',
-                actual: e.valorActual,
-                limite: e.valorLimite,
-                semaforo: e.semaforo?.color || 'N/A'
-              })));
-            }
             
             return {
               ...componente,
               estadosMonitoreo: estados
             };
           } catch (error) {
-            console.error(`❌ [PDF] Error al cargar estados para componente ${componente.numeroSerie}:`, error);
+            console.error(`❌ [PDF] Error para componente ${componente.numeroSerie}:`, error);
             return {
               ...componente,
               estadosMonitoreo: []
             };
           }
         })
-      );
-      
-      console.log('📊 [PDF] Componentes con estados cargados:', 
-        componentesConEstados.map(c => ({
-          nombre: c.nombre,
-          serie: c.numeroSerie,
-          estadosCount: c.estadosMonitoreo?.length || 0
-        }))
       );
 
       // Calcular estadísticas
@@ -334,7 +299,6 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
       // Generar y descargar PDF
       exportarComponentesPDF(datosReporte);
 
-      console.log('✅ PDF exportado exitosamente');
     } catch (error) {
       console.error('❌ Error al exportar PDF:', error);
       alert('Error al generar el reporte PDF. Por favor intente nuevamente.');

@@ -264,8 +264,22 @@ const EstadosMonitoreoComponente: React.FC<EstadosMonitoreoComponenteProps> = ({
                 : null;
               const porcentajeProgreso = Math.min((estado.valorActual / estado.valorLimite) * 100, 100);
               
-              // Calcular horas restantes para el semáforo
-              const horasRestantes = estado.valorLimite - estado.valorActual;
+              // ===== CALCULAR HORAS RESTANTES CORRECTAMENTE =====
+              // Si overhaul está habilitado, calcular respecto al próximo overhaul
+              // Si no, usar el límite del catálogo
+              const overhaulHabilitado = estado.configuracionOverhaul?.habilitarOverhaul || false;
+              let horasRestantes;
+              
+              if (overhaulHabilitado && estado.configuracionOverhaul) {
+                // Calcular progreso hacia el próximo overhaul
+                const horasUltimoOverhaul = estado.configuracionOverhaul.horasUltimoOverhaul || 0;
+                const intervaloOverhaul = estado.configuracionOverhaul.intervaloOverhaul;
+                const horasDesdeUltimoOverhaul = estado.valorActual - horasUltimoOverhaul;
+                horasRestantes = intervaloOverhaul - horasDesdeUltimoOverhaul;
+              } else {
+                // Usar límite del catálogo
+                horasRestantes = estado.valorLimite - estado.valorActual;
+              }
               
               // Determinar qué configuración de semáforo usar (overhaul o personalizada)
               const configuracionSemaforo = estado.configuracionOverhaul?.habilitarOverhaul 
@@ -289,24 +303,10 @@ const EstadosMonitoreoComponente: React.FC<EstadosMonitoreoComponenteProps> = ({
                 }
               );
               
-              // ===== CÁLCULO CORRECTO DE TSO y TSN =====
-
-              // TSO = Time Since Overhaul (Horas que EXCEDEN el límite del estado de control)
-              // DEFINICIÓN: Horas acumuladas DESPUÉS de alcanzar el límite del control
-              // - Si valorActual <= valorLimite → TSO = 0 (no ha excedido)
-              // - Si valorActual > valorLimite → TSO = valorActual - valorLimite (horas excedidas)
-              // EJEMPLO: Control 105h, Actual 120h → TSO = 15h excedido
-              const tso = Math.max(0, estado.valorActual - estado.valorLimite);
-
-              // ✅ TSN = Time Since New (Horas TOTALES acumuladas del componente)
-              // DEFINICIÓN: Horas acumuladas desde la instalación/nuevo del componente
-              // FÓRMULA: TSN = valorActual (horas actuales del componente)
-              // EJEMPLO: Componente con 20h acumuladas → TSN = 20h
-              // NOTA: Este valor se actualiza automáticamente con las horas de la aeronave
+              // Variables adicionales para la tabla
+              const tso = overhaulHabilitado ? estado.valorActual - (estado.configuracionOverhaul?.horasUltimoOverhaul || 0) : estado.valorActual;
               const tsn = estado.valorActual;
-
-              // Alias para retrocompatibilidad visual
-              const horasExcedidas = tso;
+              const horasExcedidas = Math.max(0, estado.valorActual - estado.valorLimite);
               
               return (
                 <tr key={estado._id} className="hover:bg-gray-50">
