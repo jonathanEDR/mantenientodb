@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { UserButton, useUser } from '@clerk/clerk-react';
+import { UserButton, useUser, useClerk } from '@clerk/clerk-react';
 import { usePermissions } from '../../hooks/useRoles';
 import { RoleProtection, AdminOnly, MaintenanceOnly, InspectionCapable } from '../common/RoleProtection';
 
@@ -14,6 +14,7 @@ type SidebarProps = {
 
 export default function Sidebar({ className = '', onClose, showClose = false, collapsed = false, onToggleCollapse }: SidebarProps) {
   const { user } = useUser();
+  const { signOut } = useClerk();
   const permissions = usePermissions();
 
   // Filtrar secciones de navegación basado en permisos y roles específicos
@@ -288,21 +289,37 @@ export default function Sidebar({ className = '', onClose, showClose = false, co
                   {user?.primaryEmailAddress?.emailAddress || ''}
                 </p>
               </div>
+              
+              {/* Botón de cerrar sesión visible */}
+              <button
+                onClick={() => signOut()}
+                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                title="Cerrar sesión"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+              </button>
             </div>
-            <div className="flex justify-center">
+            
+            {/* Botón de configuración de cuenta */}
+            <div className="flex items-center space-x-2">
               <UserButton 
                 afterSignOutUrl="/"
                 appearance={{
                   elements: {
                     avatarBox: "hidden",
-                    userButtonPopoverCard: "bg-white"
+                    userButtonPopoverCard: "bg-white",
+                    userButtonPopoverActionButton: "text-sm"
                   }
                 }}
               />
+              <span className="text-xs text-gray-500">Configurar cuenta</span>
             </div>
           </>
         ) : (
-          <div className="flex justify-center">
+          <div className="flex flex-col items-center space-y-2">
+            {/* Avatar en modo colapsado */}
             <div className="w-8 h-8 rounded-full overflow-hidden">
               {user?.imageUrl ? (
                 <img src={user.imageUrl} alt="avatar" className="w-full h-full object-cover" />
@@ -314,6 +331,17 @@ export default function Sidebar({ className = '', onClose, showClose = false, co
                 </div>
               )}
             </div>
+            
+            {/* Botón de cerrar sesión en modo colapsado */}
+            <button
+              onClick={() => signOut()}
+              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+              title="Cerrar sesión"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </button>
           </div>
         )}
       </div>

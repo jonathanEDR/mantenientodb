@@ -2,10 +2,11 @@ import React from 'react';
 import AuthButtons from '../components/auth/AuthButtons';
 
 export default function Home() {
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800">
       {/* Header/Navigation */}
-      <header className="backdrop-blur-sm bg-slate-900/50 border-b border-slate-700/50 sticky top-0 z-50">
+      <header className="backdrop-blur-sm bg-slate-900/50 border-b border-slate-700/50 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -76,16 +77,11 @@ export default function Home() {
               </div>
             </div>
 
-            {/* CTA Section */}
+            {/* CTA Section - Los botones ahora se gestionan desde AuthButtons */}
             <div className="mt-16 pt-8 border-t border-slate-700">
               <p className="text-slate-400 mb-6">Accede al sistema para comenzar</p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <button className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-lg hover:shadow-xl">
-                  Iniciar Sesión
-                </button>
-                <button className="px-8 py-3 bg-transparent border border-slate-600 text-slate-300 rounded-lg font-semibold hover:bg-slate-800/50 hover:border-slate-500 transition-all duration-300">
-                  Más Información
-                </button>
+              <div className="flex justify-center">
+                <AuthButtons />
               </div>
             </div>
           </div>
@@ -108,6 +104,7 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
     </div>
   );
 }

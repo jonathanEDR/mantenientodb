@@ -1,3 +1,6 @@
+/* Importar estilos personalizados para Clerk */
+@import './styles/clerk-modal-custom.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
