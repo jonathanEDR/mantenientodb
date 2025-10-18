@@ -6,6 +6,7 @@ import { IComponente, EstadoComponente } from '../../types/mantenimiento';
 import { useCatalogoComponentes } from '../../hooks/useCatalogoComponentes';
 import axiosInstance from '../../utils/axiosConfig';
 import { usePermissions } from '../../hooks/useRoles';
+import { exportarComponentesPDF, calcularEstadisticasReporte } from '../../services/pdfExportService';
 
 interface ComponentesAeronaveProps {
   aeronave: IAeronave;
@@ -265,6 +266,83 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
     }
   };
 
+  // 📄 Función para exportar componentes a PDF
+  const handleExportarPDF = async () => {
+    try {
+      setLoading(true);
+      
+      // Cargar estados de monitoreo para todos los componentes
+      console.log('🔍 [PDF] Iniciando carga de estados para', componentes.length, 'componentes');
+      
+      const componentesConEstados = await Promise.all(
+        componentes.map(async (componente) => {
+          try {
+            console.log(`🔍 [PDF] Cargando estados para componente: ${componente.numeroSerie}`);
+            const response = await axiosInstance.get(`/mantenimiento/estados-monitoreo-componente/componente/${componente._id}`);
+            
+            const estados = response.data.data || [];
+            console.log(`📊 [PDF] Componente ${componente.numeroSerie}: ${estados.length} estados encontrados`);
+            
+            if (estados.length > 0) {
+              console.log(`📊 [PDF] Estados detalle:`, estados.map((e: any) => ({
+                control: e.catalogoControlId?.nombre || 'N/A',
+                actual: e.valorActual,
+                limite: e.valorLimite,
+                semaforo: e.semaforo?.color || 'N/A'
+              })));
+            }
+            
+            return {
+              ...componente,
+              estadosMonitoreo: estados
+            };
+          } catch (error) {
+            console.error(`❌ [PDF] Error al cargar estados para componente ${componente.numeroSerie}:`, error);
+            return {
+              ...componente,
+              estadosMonitoreo: []
+            };
+          }
+        })
+      );
+      
+      console.log('📊 [PDF] Componentes con estados cargados:', 
+        componentesConEstados.map(c => ({
+          nombre: c.nombre,
+          serie: c.numeroSerie,
+          estadosCount: c.estadosMonitoreo?.length || 0
+        }))
+      );
+
+      // Calcular estadísticas
+      const estadisticas = calcularEstadisticasReporte(componentesConEstados);
+
+      // Preparar datos para el reporte
+      const datosReporte = {
+        aeronave: {
+          matricula: aeronave.matricula || 'N/A',
+          modelo: aeronave.modelo || 'N/A',
+          tipo: (aeronave.tipo === 'Helicóptero' ? 'HELICOPTERO' : 'AVION') as 'HELICOPTERO' | 'AVION',
+          horasTotales: aeronave.horasVuelo || 0,
+          estado: aeronave.estado || 'N/A'
+        },
+        componentes: componentesConEstados,
+        fecha: new Date(),
+        ...estadisticas
+      };
+
+      // Generar y descargar PDF
+      exportarComponentesPDF(datosReporte);
+
+      console.log('✅ PDF exportado exitosamente');
+    } catch (error) {
+      console.error('❌ Error al exportar PDF:', error);
+      alert('Error al generar el reporte PDF. Por favor intente nuevamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getEstadoColor = (estado: EstadoComponente) => {
     switch (estado) {
       case EstadoComponente.INSTALADO:
@@ -464,6 +542,17 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
                 className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
+            
+            {/* Botón Exportar PDF - Visible para todos */}
+            <button
+              onClick={handleExportarPDF}
+              disabled={loading || componentes.length === 0}
+              className="bg-gradient-to-r from-red-500 to-red-600 text-white px-4 py-2 rounded-lg hover:from-red-600 hover:to-red-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+            >
+              <span>📄</span>
+              <span>Exportar PDF</span>
+            </button>
+            
             {/* Botón Nuevo Componente - Solo ADMINISTRADOR y MECANICO */}
             {(permissions.isAdmin || permissions.isMechanic) && (
               <button
@@ -757,6 +846,17 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
                 className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
+            
+            {/* Botón Exportar PDF - Visible para todos */}
+            <button
+              onClick={handleExportarPDF}
+              disabled={loading || componentes.length === 0}
+              className="bg-gradient-to-r from-red-500 to-red-600 text-white px-4 py-2 rounded-lg hover:from-red-600 hover:to-red-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+            >
+              <span>📄</span>
+              <span>Exportar PDF</span>
+            </button>
+            
             {/* Botón Nuevo Componente - Solo ADMINISTRADOR y MECANICO */}
             {(permissions.isAdmin || permissions.isMechanic) && (
               <button
