@@ -60,6 +60,7 @@ export function calcularSemaforoSimple(
   let requiereAtencion = false;
 
   // ===== LÓGICA DE COLORES DEL SEMÁFORO (sincronizada con backend) =====
+  // CORREGIDA para coincidir exactamente con SemaforoCalculatorService.ts
 
   // MORADO: Componente SOBRE-CRÍTICO (excedió el límite por más del umbral morado)
   if (horasRestantes < -umbrales.morado) {
@@ -77,7 +78,7 @@ export function calcularSemaforoSimple(
     umbralActual = 0;
     requiereAtencion = true;
   }
-  // ROJO: Crítico (MENOS horas que el umbral amarillo)
+  // ROJO: Crítico (restantes ≤ umbral más bajo - amarillo)
   else if (horasRestantes <= umbrales.amarillo) {
     color = 'ROJO';
     descripcion = descripciones?.rojo || 'Crítico - Programar overhaul inmediatamente';
@@ -85,7 +86,7 @@ export function calcularSemaforoSimple(
     umbralActual = umbrales.amarillo;
     requiereAtencion = true;
   }
-  // NARANJA: Alto (entre amarillo y naranja)
+  // NARANJA: Alto (entre umbral amarillo y naranja)
   else if (horasRestantes <= umbrales.naranja) {
     color = 'NARANJA';
     descripcion = descripciones?.naranja || 'Alto - Preparar overhaul próximo';
@@ -93,7 +94,7 @@ export function calcularSemaforoSimple(
     umbralActual = umbrales.naranja;
     requiereAtencion = true;
   }
-  // AMARILLO: Medio (entre naranja y rojo)
+  // AMARILLO: Medio (entre umbral naranja y rojo)
   else if (horasRestantes <= umbrales.rojo) {
     color = 'AMARILLO';
     descripcion = descripciones?.amarillo || 'Medio - Monitorear progreso';
