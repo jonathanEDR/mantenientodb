@@ -19,21 +19,14 @@ export const useEstadosMonitoreoSimple = (componenteId?: string): UseEstadosMoni
       return;
     }
 
-    // FORZAR PETICIÓN FRESCA - ELIMINAR CACHE COMPLETAMENTE
-    const timestamp = Date.now();
-    const url = `/estados-monitoreo-componente/componente/${componenteId}?nocache=${timestamp}`;
+    // OPTIMIZACIÓN: Permitir caché del navegador (30s del backend)
+    // Esto reduce peticiones redundantes y mejora rendimiento
+    const url = `/estados-monitoreo-componente/componente/${componenteId}`;
     setLoading(true);
     setError(null);
 
     try {
-      const response = await axiosInstance.get(url, {
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0',
-          'If-None-Match': '' // Eliminar etag cache
-        }
-      });
+      const response = await axiosInstance.get(url);
       
       if (response.data.success) {
         const estadosData = response.data.data || [];

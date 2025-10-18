@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { IEstadoMonitoreoComponente, IFormEstadoMonitoreo } from '../../types/estadosMonitoreoComponente';
 import { useEstadosMonitoreoSimple } from '../../hooks/useEstadosMonitoreoSimple';
 import { 
@@ -45,14 +45,14 @@ const EstadosMonitoreoComponente: React.FC<EstadosMonitoreoComponenteProps> = ({
   // Estados temporales para funcionalidad básica
   const estadosFiltrados = estados;
 
-  // Calcular estadísticas
-  const estadisticas = {
+  // OPTIMIZACIÓN: Memoizar cálculos de estadísticas para evitar re-cálculos innecesarios
+  const estadisticas = useMemo(() => ({
     total: estados.length,
-    ok: estados.filter(e => e.estado === 'OK').length,
+    alDia: estados.filter(e => e.estado === 'OK').length,
     proximos: estados.filter(e => e.estado === 'PROXIMO').length,
     vencidos: estados.filter(e => e.estado === 'VENCIDO').length,
     conAlertas: estados.filter(e => e.alertaActiva).length
-  };
+  }), [estados]);
 
   const handleCrearEstado = () => {
     setEstadoEditando(null);
@@ -151,7 +151,7 @@ const EstadosMonitoreoComponente: React.FC<EstadosMonitoreoComponenteProps> = ({
         <div className="text-xs text-blue-600">Total Estados</div>
       </div>
       <div className="bg-green-50 rounded-lg p-3">
-        <div className="text-lg font-bold text-green-900">{estadisticas.ok}</div>
+        <div className="text-lg font-bold text-green-900">{estadisticas.alDia}</div>
         <div className="text-xs text-green-600">Al Día</div>
       </div>
       <div className="bg-yellow-50 rounded-lg p-3">
