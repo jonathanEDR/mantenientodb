@@ -25,6 +25,7 @@ interface CacheEntry<T> {
 }
 
 const inventarioCache = new Map<string, CacheEntry<any>>();
+const pendingRequests = new Map<string, Promise<any>>(); // Request deduplication
 const CACHE_TTL_AERONAVES = 2 * 60 * 1000; // 2 minutos para aeronaves
 const CACHE_TTL_STATS = 5 * 60 * 1000; // 5 minutos para estadísticas
 
@@ -68,6 +69,20 @@ export const useInventario = (initialPage = 1, initialFilters = {}) => {
     try {
       const cacheKey = getCacheKey('aeronaves', page, debouncedFilters);
       
+      // 🚀 REQUEST DEDUPLICATION: Verificar si hay una petición en progreso
+      if (pendingRequests.has(cacheKey)) {
+        console.log('⏳ [useInventario] Petición en progreso, reutilizando...');
+        setLoading(true); // ✅ FIX: Establecer loading mientras esperamos
+        const result = await pendingRequests.get(cacheKey);
+        
+        // Actualizar estado cuando la petición reutilizada termine
+        if (isMountedRef.current && result?.success) {
+          setAeronaves(result.data);
+          setLoading(false);
+        }
+        return result;
+      }
+      
       // Verificar cache
       if (useCache) {
         const cachedEntry = inventarioCache.get(cacheKey);
@@ -86,36 +101,61 @@ export const useInventario = (initialPage = 1, initialFilters = {}) => {
       setLoading(true);
       setError(null);
 
-      // Realizar petición con filtros y paginación
-      const response = await obtenerAeronaves();
+      // Crear promise y guardarlo en pendingRequests
+      const requestPromise = obtenerAeronaves()
+        .then(response => {
+          console.log('📡 [useInventario] Response recibida:', { success: response.success, dataLength: response.data?.length });
+          
+          // Verificar si la petición sigue siendo válida
+          if (!isMountedRef.current || lastRequestRef.current !== requestId) {
+            console.log('⚠️ [useInventario] Petición obsoleta, ignorando');
+            return response;
+          }
 
-      // Verificar si la petición sigue siendo válida
-      if (!isMountedRef.current || lastRequestRef.current !== requestId) return;
+          if (response.success) {
+            setAeronaves(response.data);
+            
+            // Guardar en cache
+            inventarioCache.set(cacheKey, {
+              data: response,
+              timestamp: Date.now(),
+              page,
+              filters: debouncedFilters
+            });
 
-      if (response.success) {
-        setAeronaves(response.data);
-        
-        // Guardar en cache
-        inventarioCache.set(cacheKey, {
-          data: response,
-          timestamp: Date.now(),
-          page,
-          filters: debouncedFilters
+            console.log('💾 [useInventario] Aeronaves guardadas en caché', { 
+              page, 
+              count: response.data.length
+            });
+          }
+          
+          return response;
+        })
+        .catch(error => {
+          console.error('❌ [useInventario] Error en petición:', error);
+          throw error;
+        })
+        .finally(() => {
+          // Limpiar petición pendiente
+          pendingRequests.delete(cacheKey);
+          
+          if (isMountedRef.current && lastRequestRef.current === requestId) {
+            console.log('✅ [useInventario] Estableciendo loading = false');
+            setLoading(false);
+          } else {
+            console.log('⚠️ [useInventario] No se actualiza loading (componente desmontado o petición obsoleta)');
+          }
         });
 
-        console.log('💾 [useInventario] Aeronaves guardadas en caché', { 
-          page, 
-          count: response.data.length
-        });
-      }
+      // Guardar promise para deduplicación
+      pendingRequests.set(cacheKey, requestPromise);
+      
+      return requestPromise;
 
     } catch (err) {
       console.error('Error al cargar aeronaves:', err);
       if (isMountedRef.current && lastRequestRef.current === requestId) {
         setError('Error al cargar las aeronaves');
-      }
-    } finally {
-      if (isMountedRef.current && lastRequestRef.current === requestId) {
         setLoading(false);
       }
     }
@@ -125,6 +165,18 @@ export const useInventario = (initialPage = 1, initialFilters = {}) => {
   const cargarEstadisticas = useCallback(async (useCache = true) => {
     try {
       const cacheKey = 'estadisticas';
+      
+      // 🚀 REQUEST DEDUPLICATION: Verificar si hay una petición en progreso
+      if (pendingRequests.has(cacheKey)) {
+        console.log('⏳ [useInventario] Petición de estadísticas en progreso, reutilizando...');
+        const result = await pendingRequests.get(cacheKey);
+        
+        // Actualizar estado cuando la petición reutilizada termine
+        if (isMountedRef.current && result?.success) {
+          setEstadisticas(result.data);
+        }
+        return result;
+      }
       
       // Verificar cache
       if (useCache) {
@@ -138,21 +190,34 @@ export const useInventario = (initialPage = 1, initialFilters = {}) => {
         }
       }
 
-      const response = await obtenerEstadisticasInventario();
+      // Crear promise y guardarlo en pendingRequests
+      const requestPromise = obtenerEstadisticasInventario()
+        .then(response => {
+          if (!isMountedRef.current) return response;
 
-      if (!isMountedRef.current) return;
+          if (response.success) {
+            setEstadisticas(response.data);
 
-      if (response.success) {
-        setEstadisticas(response.data);
+            // Guardar en cache
+            inventarioCache.set(cacheKey, {
+              data: response,
+              timestamp: Date.now()
+            });
 
-        // Guardar en cache
-        inventarioCache.set(cacheKey, {
-          data: response,
-          timestamp: Date.now()
+            console.log('💾 [useInventario] Estadísticas guardadas en caché');
+          }
+          
+          return response;
+        })
+        .finally(() => {
+          // Limpiar petición pendiente
+          pendingRequests.delete(cacheKey);
         });
 
-        console.log('💾 [useInventario] Estadísticas guardadas en caché');
-      }
+      // Guardar promise para deduplicación
+      pendingRequests.set(cacheKey, requestPromise);
+      
+      return requestPromise;
 
     } catch (err) {
       console.error('Error al cargar estadísticas:', err);
@@ -167,10 +232,20 @@ export const useInventario = (initialPage = 1, initialFilters = {}) => {
     isMountedRef.current = true;
     
     // Cargar aeronaves y estadísticas en paralelo
-    Promise.all([
-      cargarAeronaves(pagination.page),
-      cargarEstadisticas()
-    ]);
+    const loadInitialData = async () => {
+      console.log('🔄 [useInventario] Cargando datos iniciales...');
+      try {
+        await Promise.all([
+          cargarAeronaves(pagination.page),
+          cargarEstadisticas()
+        ]);
+        console.log('✅ [useInventario] Datos iniciales cargados');
+      } catch (error) {
+        console.error('❌ [useInventario] Error cargando datos iniciales:', error);
+      }
+    };
+    
+    loadInitialData();
 
     return () => {
       isMountedRef.current = false;
@@ -207,9 +282,10 @@ export const useInventario = (initialPage = 1, initialFilters = {}) => {
 
   // Función para refrescar datos (forzar recarga)
   const refrescarDatos = useCallback(() => {
-    // Limpiar cache
+    // Limpiar cache y peticiones pendientes
     inventarioCache.clear();
-    console.log('🗑️ [useInventario] Cache limpiado - recargando datos');
+    pendingRequests.clear();
+    console.log('🗑️ [useInventario] Cache y peticiones pendientes limpiados - recargando datos');
     
     Promise.all([
       cargarAeronaves(pagination.page, false),

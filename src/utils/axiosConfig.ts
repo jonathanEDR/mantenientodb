@@ -19,18 +19,35 @@ const axiosInstance: AxiosInstance = axios.create({
   },
 });
 
-// Configurar reintentos automáticos
+// Configurar reintentos automáticos (OPTIMIZADO para evitar loops con rate limiting)
 axiosRetry(axiosInstance, {
-  retries: 3, // Número de reintentos
-  retryDelay: axiosRetry.exponentialDelay, // Delay exponencial entre reintentos
+  retries: 2, // Reducido a 2 reintentos
+  retryDelay: (retryCount) => {
+    // Delay exponencial más conservador: 1s, 2s
+    return retryCount * 1000;
+  },
   retryCondition: (error) => {
-    // Reintentar solo en errores de red o errores 5xx del servidor
+    // ⚠️ CRÍTICO: NO reintentar errores 429 (rate limit) para evitar loops
+    if (error.response?.status === 429) {
+      console.warn('⚠️ [AxiosConfig] Error 429 detectado - no se reintentará');
+      return false;
+    }
+    
+    // NO reintentar errores 4xx del cliente (bad request, unauthorized, etc.)
+    if (error.response?.status && error.response.status >= 400 && error.response.status < 500) {
+      if ((import.meta as any).env.DEV) {
+        console.warn(`⚠️ [AxiosConfig] Error ${error.response.status} - no se reintentará`);
+      }
+      return false;
+    }
+    
+    // Solo reintentar errores de red y errores 5xx del servidor
     return axiosRetry.isNetworkOrIdempotentRequestError(error) ||
            (error.response?.status ? error.response.status >= 500 : false);
   },
   onRetry: (retryCount, error, requestConfig) => {
     if ((import.meta as any).env.DEV) {
-      console.log(`🔄 Reintentando request (${retryCount}/3):`, requestConfig.url);
+      console.log(`🔄 [AxiosConfig] Reintento ${retryCount}/2: ${requestConfig.url}`);
     }
   }
 });
@@ -39,34 +56,29 @@ axiosRetry(axiosInstance, {
 axiosInstance.interceptors.request.use(
   async (config) => {
     try {
-      console.log('🔑 [AxiosConfig] Obteniendo token para:', config.url);
+      // Logging reducido - solo en desarrollo
+      if ((import.meta as any).env.DEV) {
+        console.log(`� ${config.method?.toUpperCase()} ${config.url}`);
+      }
       
       if (globalGetToken) {
         const token = await globalGetToken();
         if (token) {
-          console.log('✅ [AxiosConfig] Token obtenido, length:', token.length);
           config.headers.Authorization = `Bearer ${token}`;
-        } else {
-          console.warn('⚠️ [AxiosConfig] No se obtuvo token');
+        } else if ((import.meta as any).env.DEV) {
+          console.warn('⚠️ No se obtuvo token');
         }
-      } else {
-        console.error('❌ [AxiosConfig] globalGetToken no está configurado');
+      } else if ((import.meta as any).env.DEV) {
+        console.error('❌ globalGetToken no configurado');
       }
-      
-      console.log('📤 [AxiosConfig] Enviando request:', {
-        method: config.method,
-        url: config.url,
-        baseURL: config.baseURL,
-        hasAuth: !!config.headers.Authorization
-      });
     } catch (error) {
-      console.error('❌ [AxiosConfig] Error obteniendo token:', error);
+      console.error('❌ Error obteniendo token:', error);
       // Continúa sin token si hay error
     }
     return config;
   },
   (error) => {
-    console.error('❌ [AxiosConfig] Error en request interceptor:', error);
+    console.error('❌ Error en request interceptor:', error);
     return Promise.reject(error);
   }
 );
@@ -74,27 +86,30 @@ axiosInstance.interceptors.request.use(
 // Response interceptor - manejar errores de autenticación
 axiosInstance.interceptors.response.use(
   (response) => {
-    console.log('✅ [AxiosConfig] Response recibida:', response.config.url, response.status);
+    // Logging mínimo solo en desarrollo
+    if ((import.meta as any).env.DEV) {
+      console.log(`✅ ${response.config.url} (${response.status})`);
+    }
     return response;
   },
   async (error) => {
-    console.error('❌ [AxiosConfig] Error en response:', {
-      url: error.config?.url,
-      status: error.response?.status,
-      message: error.message,
-      code: error.code,
-      responseData: error.response?.data
-    });
-    
-    // Solo logear errores significativos en desarrollo
-    if ((import.meta as any).env.DEV) {
-      if (error.response?.status === 401) {
-        console.warn('Auth error 401 - Token may be expired');
-      } else if (error.response?.status >= 500) {
-        console.error('Server error:', error.response?.status, error.response?.statusText);
-      } else if (error.code === 'ERR_NETWORK') {
-        console.error('❌ Network Error - Backend no responde o CORS bloqueado');
+    // Logging específico por tipo de error
+    if (error.response?.status === 429) {
+      console.error('⚠️ RATE LIMIT: Demasiadas peticiones. Por favor espera un momento.');
+    } else if (error.response?.status === 401) {
+      if ((import.meta as any).env.DEV) {
+        console.warn('🔐 Auth error 401 - Token expirado o inválido');
       }
+    } else if (error.response?.status >= 500) {
+      console.error('❌ Server error:', error.response?.status, error.response?.statusText);
+    } else if (error.code === 'ERR_NETWORK') {
+      console.error('❌ Network Error - Backend no responde o CORS bloqueado');
+    } else if ((import.meta as any).env.DEV) {
+      console.error('❌ Error:', {
+        url: error.config?.url,
+        status: error.response?.status,
+        message: error.message
+      });
     }
 
     return Promise.reject(error);
