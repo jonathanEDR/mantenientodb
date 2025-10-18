@@ -19,6 +19,42 @@ import { obtenerComponente } from '../../utils/mantenimientoApi';
 import SemaforoIndicador from '../common/SemaforoIndicador';
 import useSemaforo from '../../hooks/useSemaforo';
 
+/**
+ * ========== FUNCIÓN HELPER: CALCULAR UMBRALES AUTOMÁTICOS ==========
+ * Ajusta los umbrales del semáforo basándose en el límite del control de monitoreo
+ * 
+ * @param valorLimite - Límite del control (ej: 105h, 200h, etc.)
+ * @param configBase - Configuración predefinida base (ESTANDAR, CONSERVADOR, AGRESIVO, PORCENTAJE)
+ * @returns ISemaforoPersonalizado con umbrales ajustados al límite
+ */
+const calcularUmbralesAutomaticos = (
+  valorLimite: number, 
+  configBase: ISemaforoPersonalizado = CONFIGURACIONES_SEMAFORO_PREDEFINIDAS.PORCENTAJE
+): ISemaforoPersonalizado => {
+  
+  // Si la configuración base usa PORCENTAJE, devolver tal cual
+  // Los porcentajes se aplican dinámicamente en el cálculo del semáforo
+  if (configBase.unidad === 'PORCENTAJE') {
+    return { ...configBase };
+  }
+  
+  // Si usa HORAS, necesitamos escalar proporcionalmente al valorLimite
+  // Tomamos como referencia un límite base de 100h (configuración ESTANDAR original)
+  const LIMITE_BASE_REFERENCIA = 100;
+  const factorEscala = valorLimite / LIMITE_BASE_REFERENCIA;
+  
+  return {
+    ...configBase,
+    umbrales: {
+      morado: Math.round(configBase.umbrales.morado * factorEscala),
+      rojo: Math.round(configBase.umbrales.rojo * factorEscala),
+      naranja: Math.round(configBase.umbrales.naranja * factorEscala),
+      amarillo: Math.round(configBase.umbrales.amarillo * factorEscala),
+      verde: Math.round(configBase.umbrales.verde * factorEscala)
+    }
+  };
+};
+
 // Componente interno para preview del semáforo
 const SemaforoPreview: React.FC<{ configuracion: ISemaforoPersonalizado; intervaloOverhaul: number }> = ({ 
   configuracion, 
@@ -215,45 +251,13 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
           observacionesOverhaul: estado.configuracionOverhaul?.observacionesOverhaul || '',
           requiereParoAeronave: estado.configuracionOverhaul?.requiereParoAeronave || false,
           // ===== SISTEMA DE SEMÁFORO =====
-          semaforoPersonalizado: estado.configuracionOverhaul?.semaforoPersonalizado || {
-            habilitado: true, // Activado por defecto
-            unidad: 'HORAS',
-            umbrales: {
-              morado: 100,
-              rojo: 100,
-              naranja: 50,
-              amarillo: 25,
-              verde: 0
-            },
-            descripciones: {
-              morado: 'SOBRE-CRÍTICO - Componente vencido en uso',
-              rojo: 'Crítico - Programar overhaul inmediatamente',
-              naranja: 'Alto - Preparar overhaul próximo',
-              amarillo: 'Medio - Monitorear progreso',
-              verde: 'OK - Funcionando normal'
-            }
-          }
+          semaforoPersonalizado: estado.configuracionOverhaul?.semaforoPersonalizado || 
+            CONFIGURACIONES_SEMAFORO_PREDEFINIDAS.PORCENTAJE // ✅ Usar PORCENTAJE por defecto
         },
         configuracionPersonalizada: {
           requiereParoAeronave: estado.configuracionPersonalizada?.requiereParoAeronave || false,
-          semaforoPersonalizado: estado.configuracionPersonalizada?.semaforoPersonalizado || {
-            habilitado: true,
-            unidad: 'HORAS',
-            umbrales: {
-              morado: 100,
-              rojo: 100,
-              naranja: 50,
-              amarillo: 25,
-              verde: 0
-            },
-            descripciones: {
-              morado: 'SOBRE-CRÍTICO - Componente vencido en uso',
-              rojo: 'Crítico - Acción inmediata requerida',
-              naranja: 'Alto - Planificar mantenimiento pronto',
-              amarillo: 'Medio - Monitorear de cerca',
-              verde: 'OK - Funcionando correctamente'
-            }
-          }
+          semaforoPersonalizado: estado.configuracionPersonalizada?.semaforoPersonalizado || 
+            CONFIGURACIONES_SEMAFORO_PREDEFINIDAS.PORCENTAJE // ✅ Usar PORCENTAJE por defecto
         }
       });
     } else {
@@ -278,45 +282,11 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
           observacionesOverhaul: '',
           requiereParoAeronave: false,
           // ===== SISTEMA DE SEMÁFORO =====
-          semaforoPersonalizado: {
-            habilitado: true, // Activado por defecto
-            unidad: 'HORAS',
-            umbrales: {
-              morado: 100,
-              rojo: 100,
-              naranja: 50,
-              amarillo: 25,
-              verde: 0
-            },
-            descripciones: {
-              morado: 'SOBRE-CRÍTICO - Componente vencido en uso',
-              rojo: 'Crítico - Programar overhaul inmediatamente',
-              naranja: 'Alto - Preparar overhaul próximo',
-              amarillo: 'Medio - Monitorear progreso',
-              verde: 'OK - Funcionando normal'
-            }
-          }
+          semaforoPersonalizado: CONFIGURACIONES_SEMAFORO_PREDEFINIDAS.PORCENTAJE // ✅ Usar PORCENTAJE por defecto
         },
         configuracionPersonalizada: {
           requiereParoAeronave: false,
-          semaforoPersonalizado: {
-            habilitado: true,
-            unidad: 'HORAS',
-            umbrales: {
-              morado: 100,
-              rojo: 100,
-              naranja: 50,
-              amarillo: 25,
-              verde: 0
-            },
-            descripciones: {
-              morado: 'SOBRE-CRÍTICO - Componente vencido en uso',
-              rojo: 'Crítico - Acción inmediata requerida',
-              naranja: 'Alto - Planificar mantenimiento pronto',
-              amarillo: 'Medio - Monitorear de cerca',
-              verde: 'OK - Funcionando correctamente'
-            }
-          }
+          semaforoPersonalizado: CONFIGURACIONES_SEMAFORO_PREDEFINIDAS.PORCENTAJE // ✅ Usar PORCENTAJE por defecto
         }
       });
     }
@@ -370,6 +340,13 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
         const offsetInicial = horasAeronave; // Usar las horas actuales como offset inicial
         const valorActual = Math.max(0, horasAeronave - catalogoSeleccionado.horaInicial);
         
+        // ===== CALCULAR UMBRALES AUTOMÁTICOS BASÁNDOSE EN EL LÍMITE =====
+        // Usar configuración PORCENTAJE como base (se adapta mejor a cualquier límite)
+        const semaforoAjustado = calcularUmbralesAutomaticos(
+          rangoIntervalo,
+          CONFIGURACIONES_SEMAFORO_PREDEFINIDAS.PORCENTAJE
+        );
+        
         setFormData(prev => ({
           ...prev,
           [campo]: valor,
@@ -377,7 +354,18 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
           valorLimite: rangoIntervalo,
           offsetInicial: offsetInicial,
           basadoEnAeronave: true,
-          unidad: 'HORAS'
+          unidad: 'HORAS',
+          // Actualizar semáforo para estados sin overhaul
+          configuracionPersonalizada: {
+            ...prev.configuracionPersonalizada!,
+            semaforoPersonalizado: semaforoAjustado
+          },
+          // Actualizar semáforo para estados con overhaul
+          configuracionOverhaul: {
+            ...prev.configuracionOverhaul!,
+            intervaloOverhaul: rangoIntervalo, // Ajustar intervalo al límite del catálogo
+            semaforoPersonalizado: semaforoAjustado
+          }
         }));
       }
     }
@@ -460,16 +448,23 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
   const aplicarConfiguracionPredefinida = (nombreConfig: string) => {
     const config = CONFIGURACIONES_SEMAFORO_PREDEFINIDAS[nombreConfig];
     if (config) {
-      setFormData(prev => ({
-        ...prev,
-        configuracionOverhaul: {
-          ...prev.configuracionOverhaul!,
-          semaforoPersonalizado: {
-            ...config,
-            habilitado: prev.configuracionOverhaul!.semaforoPersonalizado!.habilitado
+      setFormData(prev => {
+        // ===== CALCULAR UMBRALES AJUSTADOS AL LÍMITE ACTUAL =====
+        // Si el límite es 105h, los umbrales se ajustan proporcionalmente
+        const limiteActual = prev.configuracionOverhaul!.intervaloOverhaul || prev.valorLimite || 100;
+        const semaforoAjustado = calcularUmbralesAutomaticos(limiteActual, config);
+        
+        return {
+          ...prev,
+          configuracionOverhaul: {
+            ...prev.configuracionOverhaul!,
+            semaforoPersonalizado: {
+              ...semaforoAjustado,
+              habilitado: prev.configuracionOverhaul!.semaforoPersonalizado!.habilitado
+            }
           }
-        }
-      }));
+        };
+      });
     }
   };
 
@@ -522,16 +517,22 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
   const aplicarConfiguracionPredefinidaPersonalizada = (nombreConfig: string) => {
     const config = CONFIGURACIONES_SEMAFORO_PREDEFINIDAS[nombreConfig];
     if (config) {
-      setFormData(prev => ({
-        ...prev,
-        configuracionPersonalizada: {
-          ...prev.configuracionPersonalizada!,
-          semaforoPersonalizado: {
-            ...config,
-            habilitado: true // Siempre activado para configuración personalizada
+      setFormData(prev => {
+        // ===== CALCULAR UMBRALES AJUSTADOS AL LÍMITE ACTUAL =====
+        const limiteActual = prev.valorLimite || 100;
+        const semaforoAjustado = calcularUmbralesAutomaticos(limiteActual, config);
+        
+        return {
+          ...prev,
+          configuracionPersonalizada: {
+            ...prev.configuracionPersonalizada!,
+            semaforoPersonalizado: {
+              ...semaforoAjustado,
+              habilitado: true // Siempre activado para configuración personalizada
+            }
           }
-        }
-      }));
+        };
+      });
     }
   };
 

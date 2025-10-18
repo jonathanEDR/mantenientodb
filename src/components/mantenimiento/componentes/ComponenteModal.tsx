@@ -189,14 +189,16 @@ export default function ComponenteModal({
       : [{ 
           limite: 1000, 
           unidad: 'HORAS' as const, 
-          acumulado: 0 // Solo para componentes nuevos
+          acumulado: 0 // ⚠️ CRÍTICO: SIEMPRE 0 para componentes nuevos
         }];
 
-    console.log('🔧 [ComponenteModal] Preservando vida útil:', {
+    console.log('🔧 [ComponenteModal] Preparando vida útil:', {
       esEdicion: !!componente,
       vidaUtilOriginal: componente?.vidaUtil,
       vidaUtilPreservada,
-      numeroSerie: formData.numeroSerie
+      numeroSerie: formData.numeroSerie,
+      esComponenteNuevo: !componente,
+      horasInicialesComponenteNuevo: !componente ? 0 : 'N/A'
     });
 
     const submitData = {

@@ -295,15 +295,15 @@ const EstadosMonitoreoComponente: React.FC<EstadosMonitoreoComponenteProps> = ({
               // DEFINICIÓN: Horas acumuladas DESPUÉS de alcanzar el límite del control
               // - Si valorActual <= valorLimite → TSO = 0 (no ha excedido)
               // - Si valorActual > valorLimite → TSO = valorActual - valorLimite (horas excedidas)
-              // EJEMPLO: Control 500h, Actual 520h → TSO = 20h excedido
+              // EJEMPLO: Control 105h, Actual 120h → TSO = 15h excedido
               const tso = Math.max(0, estado.valorActual - estado.valorLimite);
 
-              // TSN = Time Since New (Horas TOTALES acumuladas del componente)
-              // DEFINICIÓN: Suma del límite del control + las horas que lo exceden
-              // FÓRMULA: TSN = valorLimite (COLUMNA 1) + TSO (COLUMNA 2)
-              // EJEMPLO: Control 500h + TSO 20h → TSN = 520h TOTAL
-              // NOTA: TSN representa las horas totales desde la instalación/nuevo
-              const tsn = estado.valorLimite + tso;
+              // ✅ TSN = Time Since New (Horas TOTALES acumuladas del componente)
+              // DEFINICIÓN: Horas acumuladas desde la instalación/nuevo del componente
+              // FÓRMULA: TSN = valorActual (horas actuales del componente)
+              // EJEMPLO: Componente con 20h acumuladas → TSN = 20h
+              // NOTA: Este valor se actualiza automáticamente con las horas de la aeronave
+              const tsn = estado.valorActual;
 
               // Alias para retrocompatibilidad visual
               const horasExcedidas = tso;
@@ -315,8 +315,18 @@ const EstadosMonitoreoComponente: React.FC<EstadosMonitoreoComponenteProps> = ({
                       <div className="text-sm font-medium text-gray-900">
                         {catalogoControl?.descripcionCodigo || 'N/A'}
                       </div>
-                      <div className="text-sm text-gray-500">
-                        Límite: {estado.valorLimite} {estado.unidad.toLowerCase()}
+                      {/* ===== MOSTRAR PROGRESO: ACTUAL / LÍMITE ===== */}
+                      <div className="text-sm text-gray-600 mt-1">
+                        <span className="font-semibold text-blue-600">
+                          {estado.valorActual}h
+                        </span>
+                        {' / '}
+                        <span className="text-gray-500">
+                          {estado.valorLimite}h
+                        </span>
+                        <span className="ml-2 text-xs text-gray-500">
+                          ({porcentajeProgreso.toFixed(0)}%)
+                        </span>
                       </div>
                     </div>
                   </td>
