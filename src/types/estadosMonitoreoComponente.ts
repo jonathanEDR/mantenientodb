@@ -1,6 +1,13 @@
 // Tipos para estados de monitoreo por componente
 import { ISemaforoPersonalizado } from './semaforoPersonalizado';
 
+export interface IObservacionHistorial {
+  fecha: string;
+  texto: string;
+  usuario: string;
+  tipo: 'observacion' | 'cambio_estado' | 'overhaul' | 'mantenimiento';
+}
+
 export interface IEstadoMonitoreoComponente {
   _id: string;
   componenteId: string | IComponenteBasico;
@@ -12,7 +19,8 @@ export interface IEstadoMonitoreoComponente {
   fechaProximaRevision: string;
   fechaUltimaActualizacion: string;
   alertaActiva: boolean;
-  observaciones?: string;
+  observaciones?: string; // Campo legacy
+  historialObservaciones?: IObservacionHistorial[];
   // Campos para unificación de sistemas
   basadoEnAeronave: boolean;
   offsetInicial: number;

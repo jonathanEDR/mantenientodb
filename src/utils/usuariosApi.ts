@@ -53,7 +53,24 @@ export const cambiarRolUsuario = async (request: ICambiarRolRequest): Promise<IC
   const response = await axiosInstance.put(`/users/${request.userId}/role`,
     { newRole: request.newRole }
   );
-  return response.data;
+  
+  // NUEVA FUNCIONALIDAD: Manejar limpieza de caché si es necesario
+  const result = response.data;
+  if (result.success && result.updateInfo?.shouldRefreshCache) {
+    // Importar dinámicamente para evitar dependencias circulares
+    const { clearPermissionsCache } = await import('./permissionsCache');
+    
+    // Limpiar caché de permisos para forzar recarga
+    clearPermissionsCache();
+    
+    console.log('🔄 Caché limpiado después de cambio de rol:', {
+      userId: result.updateInfo.affectedUserId,
+      newRole: request.newRole,
+      timestamp: result.updateInfo.timestamp
+    });
+  }
+  
+  return result;
 };
 
 // Obtener permisos del usuario actual

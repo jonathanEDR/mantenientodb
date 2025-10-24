@@ -173,6 +173,23 @@ export default function Dashboard() {
     cargarDatos();
   }, [user?.id, isLoaded, permissions.canViewDashboard]);
 
+  // NUEVA FUNCIONALIDAD: Escuchar cambios de rol para actualizar el dashboard
+  useEffect(() => {
+    const handleRoleChanged = (event: CustomEvent) => {
+      console.log('🔄 Dashboard detectó cambio de rol, recargando datos...', event.detail);
+      // Recargar datos del dashboard cuando cambie el rol
+      if (isLoaded && user) {
+        cargarDatos();
+      }
+    };
+
+    window.addEventListener('roleChanged', handleRoleChanged as EventListener);
+
+    return () => {
+      window.removeEventListener('roleChanged', handleRoleChanged as EventListener);
+    };
+  }, [isLoaded, user]);
+
   if (!isLoaded || loading) {
     return (
       <DashboardLayout>

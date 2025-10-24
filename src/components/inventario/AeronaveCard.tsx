@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { IAeronaveCardProps } from '../../types/inventario/index';
 import { usePermissions } from '../../hooks/useRoles';
+import HistorialObservacionesAeronave from './HistorialObservacionesAeronave';
+import HistorialHorasVueloAeronave from './HistorialHorasVueloAeronave';
 
 const AeronaveCard: React.FC<IAeronaveCardProps> = ({
   aeronave,
@@ -11,6 +13,8 @@ const AeronaveCard: React.FC<IAeronaveCardProps> = ({
   obtenerColorEstado
 }) => {
   const permissions = usePermissions();
+  const [mostrarHistorialObservaciones, setMostrarHistorialObservaciones] = useState(false);
+  const [mostrarHistorialHoras, setMostrarHistorialHoras] = useState(false);
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-lg hover:border-blue-200 transition-all duration-300 overflow-hidden group">
       {/* Header de la tarjeta */}
@@ -77,12 +81,36 @@ const AeronaveCard: React.FC<IAeronaveCardProps> = ({
             <span className="text-gray-600">{aeronave.horasVuelo.toLocaleString()} horas de vuelo</span>
           </div>
 
-          {/* Observaciones (si existen) */}
-          {aeronave.observaciones && (
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-xs text-gray-600 line-clamp-2">{aeronave.observaciones}</p>
+          {/* Observaciones y Historial */}
+          <div className="bg-gray-50 rounded-lg p-3">
+            {aeronave.observaciones ? (
+              <div className="mb-2">
+                <p className="text-xs text-gray-600 line-clamp-2">{aeronave.observaciones}</p>
+              </div>
+            ) : (
+              <p className="text-xs text-gray-500 italic mb-2">Sin observaciones actuales</p>
+            )}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setMostrarHistorialObservaciones(true)}
+                className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 transition-colors"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Historial observaciones
+              </button>
+              <button
+                onClick={() => setMostrarHistorialHoras(true)}
+                className="flex items-center gap-1 text-xs text-green-600 hover:text-green-800 transition-colors"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Historial horas vuelo
+              </button>
             </div>
-          )}
+          </div>
         </div>
 
 
@@ -149,6 +177,25 @@ const AeronaveCard: React.FC<IAeronaveCardProps> = ({
           )}
         </div>
       </div>
+
+      {/* Modal de Historial de Observaciones */}
+      {mostrarHistorialObservaciones && (
+        <HistorialObservacionesAeronave
+          aeronaveId={aeronave._id}
+          matricula={aeronave.matricula}
+          onClose={() => setMostrarHistorialObservaciones(false)}
+        />
+      )}
+
+      {/* Modal de Historial de Horas de Vuelo */}
+      {mostrarHistorialHoras && (
+        <HistorialHorasVueloAeronave
+          aeronaveId={aeronave._id}
+          matricula={aeronave.matricula}
+          isOpen={mostrarHistorialHoras}
+          onClose={() => setMostrarHistorialHoras(false)}
+        />
+      )}
     </div>
   );
 };

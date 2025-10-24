@@ -121,6 +121,7 @@ const FormularioAeronave: React.FC<FormularioAeronaveProps> = ({
                 <option value="En Mantenimiento">En Mantenimiento</option>
                 <option value="Fuera de Servicio">Fuera de Servicio</option>
                 <option value="En Reparación">En Reparación</option>
+                <option value="Inoperativo por Reportaje">Inoperativo por Reportaje</option>
               </select>
             </div>
 

@@ -90,6 +90,9 @@ const GestionHorasAeronave: React.FC<GestionHorasAeronaveProps> = ({
       return;
     }
 
+    // Nota: Copiloto tiene permisos completos como rol de mantenimiento
+    // Sin validaciones especiales restrictivas
+
     setLoading(true);
     setError(null);
     
@@ -236,10 +239,15 @@ const GestionHorasAeronave: React.FC<GestionHorasAeronaveProps> = ({
             </div>
           )}
 
-          {/* Sección de Estado - ADMINISTRADOR, MECANICO y COPILOTO */}
-          {(permissions.isAdmin || permissions.isMechanic || permissions.isPilot) && (
+          {/* Sección de Estado - ADMINISTRADOR, MECANICO, COPILOTO y ESPECIALISTA */}
+          {(permissions.isAdmin || permissions.isMechanic || permissions.isPilot || permissions.isSpecialist) && (
           <div className="bg-yellow-50 rounded-lg p-4">
-            <h4 className="text-lg font-medium text-yellow-900 mb-4">Actualizar Estado</h4>
+            <h4 className="text-lg font-medium text-yellow-900 mb-4">
+              Actualizar Estado
+              {permissions.isPilot && !permissions.isAdmin && (
+                <span className="ml-2 text-sm font-normal text-yellow-700">(Piloto - Opciones limitadas)</span>
+              )}
+            </h4>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
@@ -264,13 +272,35 @@ const GestionHorasAeronave: React.FC<GestionHorasAeronaveProps> = ({
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-yellow-500"
                 >
+                  {/* 
+                    NOTA: Copiloto (isPilot) tiene acceso completo como Mecánico
+                    Solo restricciones especiales si fuera un Piloto puro (que no existe en este sistema)
+                  */}
                   <option value="Operativo">Operativo</option>
                   <option value="En Mantenimiento">En Mantenimiento</option>
                   <option value="Fuera de Servicio">Fuera de Servicio</option>
                   <option value="En Reparación">En Reparación</option>
+                  <option value="Inoperativo por Reportaje">Inoperativo por Reportaje</option>
                 </select>
               </div>
             </div>
+
+            {/* Mensaje especial solo si es necesario el reportaje con observaciones */}
+            {formData.estado === 'Inoperativo por Reportaje' && !formData.observaciones && (
+              <div className="mb-4 p-3 bg-orange-100 border border-orange-300 rounded-md">
+                <div className="flex items-start">
+                  <svg className="h-5 w-5 text-orange-400 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                  <div>
+                    <h4 className="text-sm font-medium text-orange-800">⚠️ Reportaje de Aeronave</h4>
+                    <p className="text-sm text-orange-700 mt-1">
+                      Para reportar una aeronave como inoperativa, es recomendable especificar el motivo en la sección de observaciones.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <button
               onClick={handleActualizarEstado}
@@ -282,8 +312,8 @@ const GestionHorasAeronave: React.FC<GestionHorasAeronaveProps> = ({
             </div>
           )}
 
-          {/* Sección de Observaciones - ADMINISTRADOR y ESPECIALISTA */}
-          {(permissions.isAdmin || permissions.isSpecialist) && (
+          {/* Sección de Observaciones - ADMINISTRADOR, ESPECIALISTA y COPILOTO */}
+          {(permissions.isAdmin || permissions.isSpecialist || permissions.isPilot) && (
           <div className="bg-gray-50 rounded-lg p-4">
             <h4 className="text-lg font-medium text-gray-900 mb-4">Observaciones</h4>
             
@@ -321,25 +351,41 @@ const GestionHorasAeronave: React.FC<GestionHorasAeronaveProps> = ({
                 <div>
                   <h4 className="text-sm font-medium text-blue-800">Acceso de Especialista</h4>
                   <p className="text-sm text-blue-700 mt-1">
-                    Como especialista, tienes acceso a la gestión de observaciones técnicas de la aeronave.
+                    Como especialista, tienes acceso a la gestión del estado operativo y observaciones técnicas de la aeronave.
                   </p>
                 </div>
               </div>
             </div>
           )}
 
-          {(permissions.isMechanic || permissions.isPilot) && !(permissions.isAdmin) && (
+          {permissions.isMechanic && !(permissions.isAdmin) && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
               <div className="flex items-start">
                 <svg className="h-5 w-5 text-green-400 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <div>
-                  <h4 className="text-sm font-medium text-green-800">
-                    Acceso {permissions.isMechanic ? 'de Mecánico' : 'de Copiloto'}
-                  </h4>
+                  <h4 className="text-sm font-medium text-green-800">Acceso de Mecánico</h4>
                   <p className="text-sm text-green-700 mt-1">
-                    Puedes actualizar las horas de vuelo y el estado operativo de la aeronave.
+                    Puedes actualizar las horas de vuelo y todos los estados operativos de la aeronave.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {permissions.isPilot && !(permissions.isAdmin) && !(permissions.isMechanic) && !(permissions.isSpecialist) && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-start">
+                <svg className="h-5 w-5 text-green-400 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <h4 className="text-sm font-medium text-green-800">Acceso de Copiloto</h4>
+                  <p className="text-sm text-green-700 mt-1">
+                    <strong>Horas de vuelo:</strong> Puedes agregar horas después de los vuelos.<br/>
+                    <strong>Estados:</strong> Acceso completo a todos los estados operativos.<br/>
+                    <strong>Observaciones:</strong> Puedes documentar información técnica de la aeronave.
                   </p>
                 </div>
               </div>

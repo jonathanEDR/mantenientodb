@@ -11,6 +11,7 @@ import {
 } from '../../utils/estadosMonitoreoComponenteApi';
 import ModalEstadoMonitoreo from './ModalEstadoMonitoreo';
 import FiltrosEstadosMonitoreo from './FiltrosEstadosMonitoreo';
+import HistorialObservaciones from '../monitoreo/HistorialObservaciones';
 import { usePermissions } from '../../hooks/useRoles';
 import SemaforoIndicador from '../semaforo/SemaforoIndicador';
 import { calcularSemaforoSimple } from '../../utils/semaforoUtils';
@@ -41,6 +42,7 @@ const EstadosMonitoreoComponente: React.FC<EstadosMonitoreoComponenteProps> = ({
   const [modalAbierto, setModalAbierto] = useState(false);
   const [estadoEditando, setEstadoEditando] = useState<IEstadoMonitoreoComponente | null>(null);
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
+  const [mostrarHistorial, setMostrarHistorial] = useState(false);
   const [guardando, setGuardando] = useState(false);
 
   // Estados temporales para funcionalidad básica
@@ -405,6 +407,21 @@ const EstadosMonitoreoComponente: React.FC<EstadosMonitoreoComponenteProps> = ({
                     <div className="flex flex-col space-y-2">
                       {/* Botones principales */}
                       <div className="flex space-x-2">
+                        {/* Botón Ver Historial - Todos los usuarios */}
+                        <button
+                          onClick={() => {
+                            setEstadoEditando(estado);
+                            setMostrarHistorial(true);
+                          }}
+                          className="text-gray-600 hover:text-gray-800 transition-colors flex items-center text-xs"
+                          title="Ver historial de observaciones"
+                        >
+                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Historial
+                        </button>
+
                         {/* Botón Editar - Solo ADMINISTRADOR y MECANICO */}
                         {(permissions.isAdmin || permissions.isMechanic) && (
                           <button
@@ -519,6 +536,45 @@ const EstadosMonitoreoComponente: React.FC<EstadosMonitoreoComponenteProps> = ({
         loading={guardando}
         componenteId={componenteId}
       />
+
+      {/* Modal de Historial de Observaciones */}
+      {mostrarHistorial && estadoEditando && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Historial de Observaciones
+                </h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  Componente: {numeroSerie} - Estado: {estadoEditando._id.slice(-8)}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setMostrarHistorial(false);
+                  setEstadoEditando(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6">
+              <HistorialObservaciones
+                estadoId={estadoEditando._id}
+                componenteNombre={numeroSerie}
+                onClose={() => {
+                  setMostrarHistorial(false);
+                  setEstadoEditando(null);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

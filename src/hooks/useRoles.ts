@@ -101,7 +101,21 @@ export const useCurrentUser = () => {
 
   useEffect(() => {
     fetchUserData();
-  }, [fetchUserData]);
+
+    // NUEVA FUNCIONALIDAD: Escuchar eventos de cambio de rol
+    const handleRoleChanged = (event: CustomEvent) => {
+      console.log('🔄 Rol cambiado detectado, refrescando permisos:', event.detail);
+      refreshUser();
+    };
+
+    // Agregar listener para eventos de cambio de rol
+    window.addEventListener('roleChanged', handleRoleChanged as EventListener);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('roleChanged', handleRoleChanged as EventListener);
+    };
+  }, [fetchUserData, refreshUser]);
 
   return {
     currentUser,

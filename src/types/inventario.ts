@@ -6,7 +6,7 @@ export interface IAeronave {
   modelo: string;
   fabricante: string;
   anoFabricacion: number;
-  estado: 'Operativo' | 'En Mantenimiento' | 'Fuera de Servicio' | 'En Reparación';
+  estado: 'Operativo' | 'En Mantenimiento' | 'Fuera de Servicio' | 'En Reparación' | 'Inoperativo por Reportaje';
   ubicacionActual: string;
   horasVuelo: number;
   observaciones?: string;
@@ -55,7 +55,7 @@ export interface ICrearAeronaveData {
   modelo: string;
   fabricante: string;
   anoFabricacion: number;
-  estado?: 'Operativo' | 'En Mantenimiento' | 'Fuera de Servicio' | 'En Reparación';
+  estado?: 'Operativo' | 'En Mantenimiento' | 'Fuera de Servicio' | 'En Reparación' | 'Inoperativo por Reportaje';
   ubicacionActual: string;
   horasVuelo?: number;
   observaciones?: string;
@@ -71,7 +71,8 @@ export enum EstadoAeronave {
   OPERATIVO = 'Operativo',
   EN_MANTENIMIENTO = 'En Mantenimiento',
   FUERA_DE_SERVICIO = 'Fuera de Servicio',
-  EN_REPARACION = 'En Reparación'
+  EN_REPARACION = 'En Reparación',
+  INOPERATIVO_POR_REPORTAJE = 'Inoperativo por Reportaje'
 }
 
 export interface IActualizacionHoras {

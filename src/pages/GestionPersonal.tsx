@@ -87,8 +87,20 @@ const GestionPersonal: React.FC = () => {
         if (responseEstadisticas.success) {
           setEstadisticas(responseEstadisticas.data);
         }
+
+        // NUEVA FUNCIONALIDAD: Notificar cambio de rol para actualización en tiempo real
+        // Disparar evento personalizado para que otros componentes se actualicen
+        window.dispatchEvent(new CustomEvent('roleChanged', { 
+          detail: { 
+            userId, 
+            newRole, 
+            previousRole: usuarios.find(u => u._id === userId)?.role,
+            timestamp: Date.now(),
+            userEmail: usuarios.find(u => u._id === userId)?.email
+          } 
+        }));
         
-        alert('Rol actualizado exitosamente');
+        alert('Rol actualizado exitosamente. Los cambios se reflejarán inmediatamente.');
       } else {
         alert('Error al cambiar rol: ' + response.message);
       }

@@ -18,6 +18,7 @@ import { obtenerCatalogoControlMonitoreo } from '../../utils/herramientasApi';
 import { obtenerComponente } from '../../utils/mantenimientoApi';
 import SemaforoIndicador from '../common/SemaforoIndicador';
 import useSemaforo from '../../hooks/useSemaforo';
+import HistorialObservaciones from '../monitoreo/HistorialObservaciones';
 
 /**
  * ========== FUNCIÓN HELPER: CALCULAR UMBRALES AUTOMÁTICOS ==========
@@ -183,6 +184,7 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
   const [errores, setErrores] = useState<Record<string, string>>({});
   const [componenteInfo, setComponenteInfo] = useState<any>(null);
   const [horasAeronave, setHorasAeronave] = useState<number>(0);
+  const [mostrarHistorial, setMostrarHistorial] = useState(false);
 
   // Cargar catálogos de control y información del componente
   useEffect(() => {
@@ -841,9 +843,23 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
 
           {/* Observaciones */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Observaciones
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-sm font-medium text-gray-700">
+                Observaciones
+              </label>
+              {estado && (
+                <button
+                  type="button"
+                  onClick={() => setMostrarHistorial(true)}
+                  className="flex items-center text-sm text-blue-600 hover:text-blue-800 transition-colors"
+                >
+                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Ver Historial
+                </button>
+              )}
+            </div>
             <textarea
               value={formData.observaciones || ''}
               onChange={(e) => handleInputChange('observaciones', e.target.value)}
@@ -878,6 +894,15 @@ const ModalEstadoMonitoreo: React.FC<ModalEstadoMonitoreoProps> = ({
           </button>
         </div>
       </div>
+      
+      {/* Modal de Historial de Observaciones */}
+      {mostrarHistorial && estado && (
+        <HistorialObservaciones
+          estadoId={estado._id}
+          componenteNombre={componenteInfo?.nombre}
+          onClose={() => setMostrarHistorial(false)}
+        />
+      )}
     </div>
   );
 };
