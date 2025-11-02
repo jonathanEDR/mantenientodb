@@ -109,6 +109,9 @@ export const exportarComponentesPDF = (datos: DatosReporte): void => {
     // ========== DETALLE DE COMPONENTES ==========
     yPosition = generarDetalleComponentes(doc, datos.componentes, yPosition, pageWidth, pageHeight);
     
+    // ========== SECCIÓN DE FIRMAS ==========
+    yPosition = generarSeccionFirmas(doc, yPosition, pageWidth, pageHeight);
+    
     // ========== PIE DE PÁGINA EN TODAS LAS PÁGINAS ==========
     const totalPages = (doc as any).internal.pages.length - 1;
     for (let i = 1; i <= totalPages; i++) {
@@ -183,7 +186,7 @@ const generarResumenEjecutivo = (
   doc.setTextColor(COLORES.dark);
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text('📊 RESUMEN EJECUTIVO', 14, yPosition);
+  doc.text('RESUMEN EJECUTIVO', 14, yPosition);
   yPosition += 10;
   
   // Estadísticas en cajas
@@ -248,7 +251,7 @@ const generarDetalleComponentes = (
   doc.setTextColor(COLORES.dark);
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text('🔧 DETALLE DE COMPONENTES', 14, yPosition);
+  doc.text('DETALLE DE COMPONENTES', 14, yPosition);
   yPosition += 8;
   
   // Iterar sobre cada componente
@@ -317,10 +320,13 @@ const generarDetalleComponentes = (
         doc.setTextColor(COLORES.dark);
         doc.setFontSize(8);
         doc.setFont('helvetica', 'bold');
-        let alertaTexto = '⚠️ Alertas: ';
-        if (alertas.criticas > 0) alertaTexto += `${alertas.criticas} Crítica(s) 🔴 `;
-        if (alertas.altas > 0) alertaTexto += `${alertas.altas} Alta(s) 🟠 `;
-        if (alertas.medias > 0) alertaTexto += `${alertas.medias} Media(s) 🟡`;
+        let alertaTexto = 'ALERTAS: ';
+        if (alertas.criticas > 0) alertaTexto += `${alertas.criticas} Critica(s) | `;
+        if (alertas.altas > 0) alertaTexto += `${alertas.altas} Alta(s) | `;
+        if (alertas.medias > 0) alertaTexto += `${alertas.medias} Media(s)`;
+        
+        // Limpiar el último separador si existe
+        alertaTexto = alertaTexto.replace(/ \| $/, '');
         
         doc.text(alertaTexto, 18, yPosition + 5.5);
         yPosition += 11;
@@ -359,11 +365,11 @@ const generarDetalleComponentes = (
         // Determinar acción recomendada
         let accion = 'OK';
         if (estado.semaforo) {
-          if (estado.semaforo.color === 'MORADO') accion = '⚠️ URGENTE';
-          else if (estado.semaforo.color === 'ROJO') accion = '🔴 Crítico';
-          else if (estado.semaforo.color === 'NARANJA') accion = '🟠 Alto';
-          else if (estado.semaforo.color === 'AMARILLO') accion = '🟡 Medio';
-          else accion = '✅ OK';
+          if (estado.semaforo.color === 'MORADO') accion = 'URGENTE';
+          else if (estado.semaforo.color === 'ROJO') accion = 'CRITICO';
+          else if (estado.semaforo.color === 'NARANJA') accion = 'ALTO';
+          else if (estado.semaforo.color === 'AMARILLO') accion = 'MEDIO';
+          else accion = 'OK';
         }
         
         return [
@@ -594,18 +600,128 @@ const generarPiePagina = (
 };
 
 // ============================================================================
+// GENERACIÓN DE SECCIÓN DE FIRMAS
+// ============================================================================
+
+const generarSeccionFirmas = (
+  doc: jsPDF,
+  yPosition: number,
+  pageWidth: number,
+  pageHeight: number
+): number => {
+  // Verificar espacio disponible para la sección de firmas (mínimo 60mm)
+  if (yPosition + 60 > pageHeight - 25) {
+    doc.addPage();
+    yPosition = 20;
+  }
+  
+  // Agregar espacio adicional antes de las firmas
+  yPosition += 15;
+  
+  // Título de sección
+  doc.setTextColor(COLORES.dark);
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('FIRMAS Y AUTORIZACIONES', 14, yPosition);
+  yPosition += 15;
+  
+  // Línea separadora
+  doc.setDrawColor(COLORES.primary);
+  doc.setLineWidth(1);
+  doc.line(14, yPosition, pageWidth - 14, yPosition);
+  yPosition += 10;
+  
+  // Configurar espacios para las firmas
+  const firmaWidth = (pageWidth - 42) / 2; // Dividir en dos columnas con espacios
+  const firmaHeight = 35;
+  const leftX = 14;
+  const rightX = 14 + firmaWidth + 14; // Espacio entre firmas
+  
+  // ========== JEFE DE MANTENIMIENTO (Izquierda) ==========
+  
+  // Marco para la firma
+  doc.setDrawColor(COLORES.border);
+  doc.setLineWidth(0.5);
+  doc.rect(leftX, yPosition, firmaWidth, firmaHeight);
+  
+  // Título del cargo
+  doc.setTextColor(COLORES.primary);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.text('JEFE DE MANTENIMIENTO', leftX + firmaWidth / 2, yPosition + 8, { align: 'center' });
+  
+  // Línea para la firma
+  doc.setDrawColor(COLORES.dark);
+  doc.setLineWidth(0.8);
+  doc.line(leftX + 5, yPosition + 22, leftX + firmaWidth - 5, yPosition + 22);
+  
+  // Texto "Firma"
+  doc.setTextColor(COLORES.secondary);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Firma', leftX + firmaWidth / 2, yPosition + 27, { align: 'center' });
+  
+  // Línea para nombre y fecha
+  doc.setDrawColor(COLORES.border);
+  doc.setLineWidth(0.5);
+  doc.line(leftX + 5, yPosition + 31, leftX + firmaWidth - 5, yPosition + 31);
+  doc.text('Nombre y Fecha', leftX + firmaWidth / 2, yPosition + 34, { align: 'center' });
+  
+  // ========== ENCARGADO DE AERONAVE (Derecha) ==========
+  
+  // Marco para la firma
+  doc.setDrawColor(COLORES.border);
+  doc.setLineWidth(0.5);
+  doc.rect(rightX, yPosition, firmaWidth, firmaHeight);
+  
+  // Título del cargo
+  doc.setTextColor(COLORES.primary);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.text('ENCARGADO DE AERONAVE', rightX + firmaWidth / 2, yPosition + 8, { align: 'center' });
+  
+  // Línea para la firma
+  doc.setDrawColor(COLORES.dark);
+  doc.setLineWidth(0.8);
+  doc.line(rightX + 5, yPosition + 22, rightX + firmaWidth - 5, yPosition + 22);
+  
+  // Texto "Firma"
+  doc.setTextColor(COLORES.secondary);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Firma', rightX + firmaWidth / 2, yPosition + 27, { align: 'center' });
+  
+  // Línea para nombre y fecha
+  doc.setDrawColor(COLORES.border);
+  doc.setLineWidth(0.5);
+  doc.line(rightX + 5, yPosition + 31, rightX + firmaWidth - 5, yPosition + 31);
+  doc.text('Nombre y Fecha', rightX + firmaWidth / 2, yPosition + 34, { align: 'center' });
+  
+  yPosition += firmaHeight + 10;
+  
+  // Nota adicional
+  doc.setTextColor(COLORES.secondary);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'italic');
+  doc.text('Este reporte certifica el estado actual de los componentes de la aeronave al momento de su generación.', 
+           pageWidth / 2, yPosition, { align: 'center' });
+  
+  return yPosition + 5;
+};
+
+// ============================================================================
 // FUNCIONES AUXILIARES
 // ============================================================================
 
 const formatearSemaforo = (color: string): string => {
-  const emojis: Record<string, string> = {
-    'VERDE': '🟢',
-    'AMARILLO': '🟡',
-    'NARANJA': '🟠',
-    'ROJO': '🔴',
-    'MORADO': '🟣',
+  const estados: Record<string, string> = {
+    'VERDE': 'OK',
+    'AMARILLO': 'MEDIO',
+    'NARANJA': 'ALTO',
+    'ROJO': 'CRITICO',
+    'MORADO': 'URGENTE',
   };
-  return emojis[color] || color;
+  return estados[color] || color;
 };
 
 const formatearFecha = (fecha: Date): string => {

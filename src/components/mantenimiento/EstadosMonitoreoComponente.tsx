@@ -16,6 +16,45 @@ import { usePermissions } from '../../hooks/useRoles';
 import SemaforoIndicador from '../semaforo/SemaforoIndicador';
 import { calcularSemaforoSimple } from '../../utils/semaforoUtils';
 
+// Función helper para calcular horas hasta próximo overhaul
+const calcularHorasProximoOverhaul = (estado: IEstadoMonitoreoComponente): { horas: number; estado: 'OK' | 'PROXIMO' | 'VENCIDO'; texto: string } => {
+  const config = estado.configuracionOverhaul;
+  
+  if (!config || !config.habilitarOverhaul) {
+    return { horas: 0, estado: 'OK', texto: 'Sin overhaul configurado' };
+  }
+
+  const horasActuales = estado.valorActual;
+  const intervaloOverhaul = config.intervaloOverhaul;
+  const horasUltimoOverhaul = config.horasUltimoOverhaul || 0;
+
+  // Calcular cuántas horas han pasado desde el último overhaul
+  const horasDesdeUltimoOverhaul = horasActuales - horasUltimoOverhaul;
+  
+  // Calcular cuántas horas faltan para el próximo overhaul
+  const horasFaltantes = intervaloOverhaul - horasDesdeUltimoOverhaul;
+
+  if (horasFaltantes <= 0) {
+    return { 
+      horas: Math.abs(horasFaltantes), 
+      estado: 'VENCIDO', 
+      texto: `Vencido por ${Math.abs(horasFaltantes)}h` 
+    };
+  } else if (horasFaltantes <= intervaloOverhaul * 0.1) { // 10% del intervalo = próximo
+    return { 
+      horas: horasFaltantes, 
+      estado: 'PROXIMO', 
+      texto: `${Math.round(horasFaltantes)}h restantes` 
+    };
+  } else {
+    return { 
+      horas: horasFaltantes, 
+      estado: 'OK', 
+      texto: `${Math.round(horasFaltantes)}h restantes` 
+    };
+  }
+};
+
 interface EstadosMonitoreoComponenteProps {
   componenteId: string;
   numeroSerie: string;
@@ -249,7 +288,7 @@ const EstadosMonitoreoComponente: React.FC<EstadosMonitoreoComponenteProps> = ({
                 Estado
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Próxima Revisión
+                Próximo Overhaul (Horas)
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Semáforo
@@ -386,8 +425,26 @@ const EstadosMonitoreoComponente: React.FC<EstadosMonitoreoComponenteProps> = ({
                       </div>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {formatearFechaMonitoreo(estado.fechaProximaRevision)}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    {(() => {
+                      const proximoOverhaul = calcularHorasProximoOverhaul(estado);
+                      const colorClase = {
+                        'OK': 'text-green-700 bg-green-50',
+                        'PROXIMO': 'text-yellow-700 bg-yellow-50',
+                        'VENCIDO': 'text-red-700 bg-red-50'
+                      }[proximoOverhaul.estado];
+
+                      return (
+                        <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${colorClase}`}>
+                          <span className="mr-1">
+                            {proximoOverhaul.estado === 'OK' && '✅'}
+                            {proximoOverhaul.estado === 'PROXIMO' && '⚠️'}
+                            {proximoOverhaul.estado === 'VENCIDO' && '🚨'}
+                          </span>
+                          {proximoOverhaul.texto}
+                        </div>
+                      );
+                    })()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {configuracionSemaforo?.habilitado ? (

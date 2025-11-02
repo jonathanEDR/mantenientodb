@@ -121,7 +121,7 @@ const GestionPersonal: React.FC = () => {
         return 'bg-blue-100 text-blue-800 border-blue-200';
       case UserRole.ESPECIALISTA:
         return 'bg-green-100 text-green-800 border-green-200';
-      case UserRole.COPILOTO:
+      case UserRole.PILOTO:
         return 'bg-gray-100 text-gray-800 border-gray-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
@@ -137,8 +137,8 @@ const GestionPersonal: React.FC = () => {
         return 'Mecánico';
       case UserRole.ESPECIALISTA:
         return 'Especialista';
-      case UserRole.COPILOTO:
-        return 'Copiloto';
+      case UserRole.PILOTO:
+        return 'Piloto';
       default:
         return 'Desconocido';
     }
@@ -342,7 +342,7 @@ const GestionPersonal: React.FC = () => {
                         >
                           <option value={UserRole.ADMINISTRADOR}>Administrador</option>
                           <option value={UserRole.MECANICO}>Mecánico</option>
-                          <option value={UserRole.COPILOTO}>Copiloto</option>
+                          <option value={UserRole.PILOTO}>Piloto</option>
                           <option value={UserRole.ESPECIALISTA}>Especialista</option>
                         </select>
                         {changingRole === usuario._id && (

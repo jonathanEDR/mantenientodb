@@ -1,6 +1,9 @@
 // Re-export all inventory types for backward compatibility
 export * from '../inventario';
 
+// Import specific types for use in interfaces
+import { IObservacionAeronaveHistorial } from '../../services/historialAeronaveService';
+
 // Additional types for modular components
 export interface IVistaInventario {
   vistaComponentes: boolean;
@@ -17,6 +20,8 @@ export interface IFormularioInventario {
 
 export interface IAeronaveCardProps {
   aeronave: IAeronave;
+  observacionReciente?: IObservacionAeronaveHistorial | null;
+  loadingObservacion?: boolean;
   onVerComponentes: (aeronave: IAeronave) => void;
   onEditar: (aeronave: IAeronave) => void;
   onEliminar: (aeronave: IAeronave) => void;

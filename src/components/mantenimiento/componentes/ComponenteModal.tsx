@@ -240,7 +240,7 @@ export default function ComponenteModal({
     { value: 'INSTALADO', label: 'Instalado' },
     { value: 'EN_ALMACEN', label: 'En Almacén' },
     { value: 'EN_REPARACION', label: 'En Reparación' },
-    { value: 'CONDENADO', label: 'Condenado' },
+    { value: 'TRAMITE_POR_BAJA', label: 'Trámite por Baja' },
     { value: 'EN_OVERHAUL', label: 'En Overhaul' },
     { value: 'PENDIENTE_INSPECCION', label: 'Pendiente Inspección' }
   ];

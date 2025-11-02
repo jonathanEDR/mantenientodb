@@ -1,5 +1,6 @@
 import React from 'react';
 import { IAeronaveListProps } from '../../types/inventario/index';
+import { useObservacionesRecientes } from '../../hooks/useObservacionReciente';
 import AeronaveCard from './AeronaveCard';
 
 const AeronaveList: React.FC<IAeronaveListProps> = ({
@@ -11,6 +12,9 @@ const AeronaveList: React.FC<IAeronaveListProps> = ({
   onGestionarHoras,
   obtenerColorEstado
 }) => {
+  // Hook optimizado para obtener observaciones recientes de todas las aeronaves de una vez
+  const aeronaveIds = aeronaves.map(aeronave => aeronave._id);
+  const { observaciones: observacionesRecientes, loading: loadingObservaciones } = useObservacionesRecientes(aeronaveIds);
   if (aeronaves.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow p-12 text-center">
@@ -41,6 +45,8 @@ const AeronaveList: React.FC<IAeronaveListProps> = ({
             <AeronaveCard
               key={aeronave._id}
               aeronave={aeronave}
+              observacionReciente={observacionesRecientes[aeronave._id] || null}
+              loadingObservacion={loadingObservaciones}
               onVerComponentes={onVerComponentes}
               onEditar={onEditar}
               onEliminar={onEliminar}

@@ -80,7 +80,7 @@ export default function Sidebar({ className = '', onClose, showClose = false, co
         });
       }
     } 
-    // OTROS ROLES (MECANICO, ESPECIALISTA, COPILOTO): Solo Inventario y Personal
+    // OTROS ROLES (MECANICO, ESPECIALISTA, PILOTO): Solo Inventario y Personal
     else if (permissions.isMechanic || permissions.isSpecialist || permissions.isPilot) {
       // Personal (acceso limitado para otros roles)
       if (permissions.canViewUsers) {

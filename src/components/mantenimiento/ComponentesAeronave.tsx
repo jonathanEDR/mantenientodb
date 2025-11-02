@@ -273,7 +273,7 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
       case EstadoComponente.EN_MANTENIMIENTO:
       case EstadoComponente.EN_REPARACION:
         return 'text-yellow-600 bg-yellow-100';
-      case EstadoComponente.CONDENADO:
+      case EstadoComponente.TRAMITE_POR_BAJA:
         return 'text-red-600 bg-red-100';
       case EstadoComponente.EN_ALMACEN:
         return 'text-blue-600 bg-blue-100';
@@ -289,8 +289,8 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
       case EstadoComponente.EN_MANTENIMIENTO:
       case EstadoComponente.EN_REPARACION:
         return '⏱';
-      case EstadoComponente.CONDENADO:
-        return '⚠';
+      case EstadoComponente.TRAMITE_POR_BAJA:
+        return '📋';
       case EstadoComponente.EN_ALMACEN:
         return '📦';
       default:
@@ -502,7 +502,7 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
                 <option value={EstadoComponente.EN_ALMACEN}>En Almacén</option>
                 <option value={EstadoComponente.EN_MANTENIMIENTO}>En Mantenimiento</option>
                 <option value={EstadoComponente.EN_REPARACION}>En Reparación</option>
-                <option value={EstadoComponente.CONDENADO}>Condenado</option>
+                <option value={EstadoComponente.TRAMITE_POR_BAJA}>Tr�mite por Baja</option>
               </select>
             </div>
 
@@ -800,7 +800,7 @@ const ComponentesAeronave: React.FC<ComponentesAeronaveProps> = ({
                 <option value={EstadoComponente.EN_ALMACEN}>En Almacén</option>
                 <option value={EstadoComponente.EN_MANTENIMIENTO}>En Mantenimiento</option>
                 <option value={EstadoComponente.EN_REPARACION}>En Reparación</option>
-                <option value={EstadoComponente.CONDENADO}>Condenado</option>
+                <option value={EstadoComponente.TRAMITE_POR_BAJA}>Tr�mite por Baja</option>
               </select>
             </div>
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { IComponente } from '../types/mantenimiento';
 import { IAeronave } from '../types/inventario';
 import DashboardLayout from '../components/layout/DashboardLayout';
@@ -14,6 +15,9 @@ import { obtenerAeronaves } from '../utils/inventarioApi';
 import { obtenerComponentes } from '../utils/mantenimientoApi';
 
 export default function GestionComponentes() {
+  // Hook para parámetros de URL
+  const [searchParams, setSearchParams] = useSearchParams();
+  
   // Estados locales para datos
   const [componentes, setComponentes] = useState<IComponente[]>([]);
   const [aeronaves, setAeronaves] = useState<IAeronave[]>([]);
@@ -58,6 +62,62 @@ export default function GestionComponentes() {
     fetchAeronaves();
   }, []);
 
+  // Efecto para manejar parámetros de URL
+  useEffect(() => {
+    const componenteId = searchParams.get('componenteId');
+    const aeronaveId = searchParams.get('aeronaveId');
+    const estadoId = searchParams.get('estadoId');
+    
+    if (componenteId && componentes.length > 0) {
+      console.log('🔍 [COMPONENTES] Buscando componente por ID desde URL:', componenteId);
+      
+      // Buscar el componente específico
+      const componenteEncontrado = componentes.find(comp => comp._id === componenteId);
+      
+      if (componenteEncontrado) {
+        console.log('✅ [COMPONENTES] Componente encontrado:', componenteEncontrado.nombre);
+        
+        // Mostrar notificación de llegada desde dashboard
+        setMostrarNotificacionDashboard(true);
+        setComponenteDesdeDatabase(`${componenteEncontrado.numeroSerie || componenteEncontrado.nombre}`);
+        
+        // Si viene desde dashboard, mostrar información contextual
+        if (aeronaveId) {
+          console.log('📍 [COMPONENTES] Contexto de aeronave:', aeronaveId);
+        }
+        
+        if (estadoId) {
+          console.log('📋 [COMPONENTES] Enfoque en estado específico:', estadoId);
+        }
+        
+        // Abrir directamente el módulo de monitoreo del componente
+        setComponenteMonitoreo(componenteEncontrado);
+        setMonitoreoAbierto(true);
+        
+        // Opcional: Filtrar para mostrar solo este componente
+        setFiltroBusqueda(componenteEncontrado.numeroSerie || componenteEncontrado.nombre || '');
+        
+        // Ocultar notificación después de unos segundos
+        setTimeout(() => {
+          setMostrarNotificacionDashboard(false);
+        }, 5000);
+        
+        // Limpiar los parámetros de URL después de procesar
+        setTimeout(() => {
+          setSearchParams(prev => {
+            const newParams = new URLSearchParams(prev);
+            newParams.delete('componenteId');
+            newParams.delete('aeronaveId');
+            newParams.delete('estadoId');
+            return newParams;
+          });
+        }, 1000); // Dar tiempo para que se procese antes de limpiar
+      } else {
+        console.warn('⚠️ [COMPONENTES] Componente no encontrado con ID:', componenteId);
+      }
+    }
+  }, [componentes, searchParams, setSearchParams]);
+
   // Estados derivados
   const loading = loadingComponentes || loadingAeronaves;
   const error = errorComponentes ? 'Error al cargar componentes' : null;
@@ -89,6 +149,10 @@ export default function GestionComponentes() {
   // Estados para el módulo de monitoreo
   const [componenteMonitoreo, setComponenteMonitoreo] = React.useState<IComponente | null>(null);
   const [monitoreoAbierto, setMonitoreoAbierto] = React.useState(false);
+
+  // Estado para notificación de navegación desde dashboard
+  const [mostrarNotificacionDashboard, setMostrarNotificacionDashboard] = React.useState(false);
+  const [componenteDesdeDashboard, setComponenteDesdeDatabase] = React.useState<string>('');
 
   // Filtrar componentes localmente
   const componentesFiltrados = React.useMemo(() => {
@@ -242,6 +306,35 @@ export default function GestionComponentes() {
             Nuevo Componente
           </button>
         </div>
+
+        {/* Notificación de navegación desde dashboard */}
+        {mostrarNotificacionDashboard && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="flex-shrink-0">
+                <svg className="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <h4 className="text-sm font-medium text-blue-800">
+                  📊 Navegaste desde el Dashboard de Monitoreo
+                </h4>
+                <p className="text-sm text-blue-700">
+                  Se ha abierto automáticamente el monitoreo del componente <strong>{componenteDesdeDashboard}</strong>
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setMostrarNotificacionDashboard(false)}
+              className="text-blue-400 hover:text-blue-600"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
 
         {/* Filtros */}
         <ComponentesFilters

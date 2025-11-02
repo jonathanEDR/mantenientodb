@@ -7,15 +7,59 @@ const backend = process.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 export default defineConfig({
   plugins: [react()],
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      '@clerk/clerk-react',
+      'react-router-dom',
+      'axios'
+    ]
+  },
   build: {
     outDir: 'dist',
     sourcemap: false,
+    chunkSizeWarningLimit: 1000, // Aumentar límite de warning para chunks
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          clerk: ['@clerk/clerk-react'],
-          routing: ['react-router-dom']
+        manualChunks: (id) => {
+          // Chunk para vendor libraries (React, etc.)
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'react-vendor';
+            }
+            if (id.includes('@clerk/clerk-react')) {
+              return 'clerk';
+            }
+            if (id.includes('react-router')) {
+              return 'routing';
+            }
+            if (id.includes('axios')) {
+              return 'http';
+            }
+            if (id.includes('jspdf') || id.includes('autotable')) {
+              return 'pdf';
+            }
+            // Otras librerías grandes
+            return 'vendor';
+          }
+          
+          // Chunks por módulos de la aplicación
+          if (id.includes('/src/components/inventario/')) {
+            return 'inventario';
+          }
+          if (id.includes('/src/components/mantenimiento/')) {
+            return 'mantenimiento';
+          }
+          if (id.includes('/src/components/monitoreo/')) {
+            return 'monitoreo';
+          }
+          if (id.includes('/src/services/')) {
+            return 'services';
+          }
+          
+          // Chunk principal para el resto
+          return 'main';
         }
       }
     }

@@ -6,6 +6,11 @@ export interface IHistorialHorasVuelo {
   horasNuevas: number;
   incremento: number;
   usuario: string;
+  usuarioNombre?: string;
+  usuarioInfo?: {
+    name: string;
+    email: string;
+  };
   observacion?: string;
   motivo: 'VUELO' | 'MANTENIMIENTO' | 'CORRECCION' | 'INSPECCION' | 'OVERHAUL' | 'OTROS';
 }

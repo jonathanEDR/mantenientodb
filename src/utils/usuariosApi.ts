@@ -8,6 +8,7 @@ import {
   ICambiarRolResponse,
   ICurrentUserResponse
 } from '../types/usuarios';
+import { clearPermissionsCache } from './permissionsCache';
 
 // Configurar base URL para las API calls - No necesario con axiosInstance
 // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
@@ -57,9 +58,6 @@ export const cambiarRolUsuario = async (request: ICambiarRolRequest): Promise<IC
   // NUEVA FUNCIONALIDAD: Manejar limpieza de caché si es necesario
   const result = response.data;
   if (result.success && result.updateInfo?.shouldRefreshCache) {
-    // Importar dinámicamente para evitar dependencias circulares
-    const { clearPermissionsCache } = await import('./permissionsCache');
-    
     // Limpiar caché de permisos para forzar recarga
     clearPermissionsCache();
     

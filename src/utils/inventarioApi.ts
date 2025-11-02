@@ -74,14 +74,20 @@ export const actualizarHorasConPropagacion = async (
   return response.data;
 };
 
-// Actualizar estado de aeronave
+// Actualizar estado de aeronave (opcionalmente con observaciones)
 export const actualizarEstadoAeronave = async (
   aeronaveId: string,
-  estado: EstadoAeronave
+  estado: EstadoAeronave,
+  observaciones?: string
 ): Promise<IAeronaveResponse> => {
+  const data: any = { estado };
+  if (observaciones !== undefined) {
+    data.observaciones = observaciones;
+  }
+  
   const response = await axiosInstance.put(
     `/inventario/${aeronaveId}/estado`,
-    { estado }
+    data
   );
   return response.data;
 };

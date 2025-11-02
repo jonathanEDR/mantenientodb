@@ -223,7 +223,7 @@ const HistorialHorasVueloAeronave: React.FC<Props> = ({
                         </div>
                         <div>
                           <span className="text-gray-600">Registrado por:</span>
-                          <span className="ml-1 font-medium">{entrada.usuario}</span>
+                          <span className="ml-1 font-medium">{entrada.usuarioNombre || entrada.usuario}</span>
                         </div>
                       </div>
 

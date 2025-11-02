@@ -188,7 +188,7 @@ export const usePermissions = () => {
     isAdmin: userRole === UserRole.ADMINISTRADOR,
     isMechanic: userRole === UserRole.MECANICO,
     isSpecialist: userRole === UserRole.ESPECIALISTA,
-    isPilot: userRole === UserRole.COPILOTO,
+    isPilot: userRole === UserRole.PILOTO,
     
     // Helper para verificar múltiples roles
     hasAnyRole: (roles: UserRole[]) => userRole ? roles.includes(userRole) : false,
@@ -214,7 +214,7 @@ export const usePermissions = () => {
         [UserRole.ADMINISTRADOR]: 4,
         [UserRole.MECANICO]: 3,
         [UserRole.ESPECIALISTA]: 2,
-        [UserRole.COPILOTO]: 1
+        [UserRole.PILOTO]: 1
       };
       
       const currentLevel = userRole ? roleLevels[userRole] : 0;

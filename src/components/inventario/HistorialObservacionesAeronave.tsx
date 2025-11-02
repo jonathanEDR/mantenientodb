@@ -262,7 +262,7 @@ const HistorialObservacionesAeronave: React.FC<HistorialObservacionesAeronavePro
                     </div>
                     <div className="flex items-center gap-1 text-sm text-gray-600">
                       <UserIcon />
-                      {observacion.usuario}
+                      {observacion.usuarioNombre || observacion.usuario}
                     </div>
                   </div>
                   

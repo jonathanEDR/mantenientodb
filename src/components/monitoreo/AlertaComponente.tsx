@@ -144,7 +144,7 @@ const AlertaComponente: React.FC<AlertaComponenteProps> = ({
           </div>
         </div>
 
-        {/* Próxima revisión */}
+        {/* Info de revisión */}
         <div className="pt-2 border-t border-current border-opacity-20">
           <p className="text-xs opacity-75">Próxima revisión:</p>
           <p className="text-xs font-semibold">

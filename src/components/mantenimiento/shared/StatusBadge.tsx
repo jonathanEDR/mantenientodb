@@ -16,7 +16,7 @@ export default function StatusBadge({ status, variant = 'estado', className = ''
           return 'bg-blue-100 text-blue-800';
         case 'EN_REPARACION':
           return 'bg-orange-100 text-orange-800';
-        case 'CONDENADO':
+        case 'TRAMITE_POR_BAJA':
           return 'bg-red-100 text-red-800';
         case 'EN_OVERHAUL':
           return 'bg-purple-100 text-purple-800';

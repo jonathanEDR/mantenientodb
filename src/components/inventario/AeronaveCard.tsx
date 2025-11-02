@@ -6,6 +6,8 @@ import HistorialHorasVueloAeronave from './HistorialHorasVueloAeronave';
 
 const AeronaveCard: React.FC<IAeronaveCardProps> = ({
   aeronave,
+  observacionReciente,
+  loadingObservacion = false,
   onVerComponentes,
   onEditar,
   onEliminar,
@@ -83,9 +85,27 @@ const AeronaveCard: React.FC<IAeronaveCardProps> = ({
 
           {/* Observaciones y Historial */}
           <div className="bg-gray-50 rounded-lg p-3">
-            {aeronave.observaciones ? (
+            {loadingObservacion ? (
+              <div className="mb-2">
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                  <p className="text-xs text-gray-500">Cargando observación...</p>
+                </div>
+              </div>
+            ) : observacionReciente ? (
+              <div className="mb-2">
+                <div className="flex items-start justify-between mb-1">
+                  <p className="text-xs text-gray-600 line-clamp-2 flex-1">{observacionReciente.texto}</p>
+                  <span className="text-xs text-gray-400 ml-2 flex-shrink-0">
+                    {new Date(observacionReciente.fecha).toLocaleDateString('es-CO')}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-400">Por: {observacionReciente.usuarioNombre || observacionReciente.usuario}</p>
+              </div>
+            ) : aeronave.observaciones ? (
               <div className="mb-2">
                 <p className="text-xs text-gray-600 line-clamp-2">{aeronave.observaciones}</p>
+                <p className="text-xs text-gray-400 mt-1">Observación general</p>
               </div>
             ) : (
               <p className="text-xs text-gray-500 italic mb-2">Sin observaciones actuales</p>
@@ -169,7 +189,7 @@ const AeronaveCard: React.FC<IAeronaveCardProps> = ({
             </button>
           )}
 
-          {/* Espacio vacío para roles sin botones de acción (ESPECIALISTA y COPILOTO) */}
+          {/* Espacio vacío para roles sin botones de acción (ESPECIALISTA y PILOTO) */}
           {!permissions.isAdmin && !permissions.isMechanic && (
             <div className="col-span-2 text-center py-2 text-sm text-gray-500">
               Solo visualización permitida

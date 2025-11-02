@@ -4,6 +4,11 @@ export interface IObservacionAeronaveHistorial {
   fecha: string;
   texto: string;
   usuario: string;
+  usuarioNombre?: string;
+  usuarioInfo?: {
+    name: string;
+    email: string;
+  };
   tipo: 'observacion' | 'cambio_estado' | 'horas_actualizadas' | 'mantenimiento';
 }
 
@@ -57,6 +62,30 @@ export const historialAeronaveService = {
     const response = await axios.post(`/inventario/${aeronaveId}/observaciones`, {
       observacion,
       tipo
+    });
+    return response.data;
+  },
+
+  // Obtener observaciones recientes para múltiples aeronaves (optimizado)
+  async obtenerObservacionesRecientesBatch(
+    aeronaveIds: string[]
+  ): Promise<{ 
+    success: boolean; 
+    data: { [key: string]: IObservacionAeronaveHistorial | null }; 
+    message: string;
+  }> {
+    if (aeronaveIds.length === 0) {
+      return {
+        success: true,
+        data: {},
+        message: 'No hay aeronaves para procesar'
+      };
+    }
+
+    const response = await axios.get('/inventario/observaciones-recientes/batch', {
+      params: {
+        aeronaveIds: aeronaveIds.join(',')
+      }
     });
     return response.data;
   }

@@ -334,8 +334,9 @@ const DashboardMantenimiento: React.FC = () => {
               }}
               onClickEstado={(estadoId: string, componenteId: string) => {
                 executeProtected(() => {
-                  console.log('📊 [DASHBOARD] Navegando a estado:', estadoId, 'del componente:', componenteId);
-                  navigate(`/mantenimiento/componentes/${componenteId}/estados/${estadoId}`);
+                  console.log('📊 [DASHBOARD] Navegando a componente desde estado:', componenteId, 'estadoId:', estadoId);
+                  // Ambos clics van a la página de componentes, enfocados en el componente específico
+                  navigate(`/mantenimiento/componentes?componenteId=${componenteId}&estadoId=${estadoId}`);
                 });
               }}
               onCompletarOverhaul={(componenteId: string, estadoIds: string[]) => {

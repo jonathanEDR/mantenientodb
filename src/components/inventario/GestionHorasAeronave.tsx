@@ -90,15 +90,33 @@ const GestionHorasAeronave: React.FC<GestionHorasAeronaveProps> = ({
       return;
     }
 
-    // Nota: Copiloto tiene permisos completos como rol de mantenimiento
-    // Sin validaciones especiales restrictivas
+    // Validar observaciones para "Inoperativo por Reportaje"
+    if (formData.estado === 'Inoperativo por Reportaje' && !formData.observaciones.trim()) {
+      setError('Las observaciones son requeridas para reportar una aeronave como inoperativa');
+      return;
+    }
 
     setLoading(true);
     setError(null);
     
     try {
-      const aeronaveActualizada = await actualizarEstadoAeronave(aeronave._id, formData.estado);
-      setSuccess(`Estado actualizado a: ${formData.estado}`);
+      // Para "Inoperativo por Reportaje", enviar también las observaciones
+      const observaciones = formData.estado === 'Inoperativo por Reportaje' 
+        ? formData.observaciones 
+        : undefined;
+        
+      const aeronaveActualizada = await actualizarEstadoAeronave(
+        aeronave._id, 
+        formData.estado, 
+        observaciones
+      );
+      
+      let mensaje = `Estado actualizado a: ${formData.estado}`;
+      if (formData.estado === 'Inoperativo por Reportaje') {
+        mensaje += ' y observaciones de reportaje guardadas';
+      }
+      
+      setSuccess(mensaje);
       onActualizado(aeronaveActualizada.data);
       
     } catch (err) {
@@ -173,7 +191,7 @@ const GestionHorasAeronave: React.FC<GestionHorasAeronaveProps> = ({
             </div>
           )}
 
-          {/* Sección de Horas de Vuelo - ADMINISTRADOR, MECANICO y COPILOTO */}
+          {/* Sección de Horas de Vuelo - ADMINISTRADOR, MECANICO y PILOTO */}
           {(permissions.isAdmin || permissions.isMechanic || permissions.isPilot) && (
             <div className="bg-blue-50 rounded-lg p-4">
               <h4 className="text-lg font-medium text-blue-900 mb-4">Actualizar Horas de Vuelo</h4>
@@ -239,7 +257,7 @@ const GestionHorasAeronave: React.FC<GestionHorasAeronaveProps> = ({
             </div>
           )}
 
-          {/* Sección de Estado - ADMINISTRADOR, MECANICO, COPILOTO y ESPECIALISTA */}
+          {/* Sección de Estado - ADMINISTRADOR, MECANICO, PILOTO y ESPECIALISTA */}
           {(permissions.isAdmin || permissions.isMechanic || permissions.isPilot || permissions.isSpecialist) && (
           <div className="bg-yellow-50 rounded-lg p-4">
             <h4 className="text-lg font-medium text-yellow-900 mb-4">
@@ -273,7 +291,7 @@ const GestionHorasAeronave: React.FC<GestionHorasAeronaveProps> = ({
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-yellow-500"
                 >
                   {/* 
-                    NOTA: Copiloto (isPilot) tiene acceso completo como Mecánico
+                    NOTA: Piloto (isPilot) tiene acceso completo como Mecánico
                     Solo restricciones especiales si fuera un Piloto puro (que no existe en este sistema)
                   */}
                   <option value="Operativo">Operativo</option>
@@ -285,8 +303,8 @@ const GestionHorasAeronave: React.FC<GestionHorasAeronaveProps> = ({
               </div>
             </div>
 
-            {/* Mensaje especial solo si es necesario el reportaje con observaciones */}
-            {formData.estado === 'Inoperativo por Reportaje' && !formData.observaciones && (
+            {/* Mensaje especial para reportaje con observaciones */}
+            {formData.estado === 'Inoperativo por Reportaje' && (
               <div className="mb-4 p-3 bg-orange-100 border border-orange-300 rounded-md">
                 <div className="flex items-start">
                   <svg className="h-5 w-5 text-orange-400 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -295,8 +313,27 @@ const GestionHorasAeronave: React.FC<GestionHorasAeronaveProps> = ({
                   <div>
                     <h4 className="text-sm font-medium text-orange-800">⚠️ Reportaje de Aeronave</h4>
                     <p className="text-sm text-orange-700 mt-1">
-                      Para reportar una aeronave como inoperativa, es recomendable especificar el motivo en la sección de observaciones.
+                      {!formData.observaciones.trim() ? (
+                        <><strong>Observaciones requeridas:</strong> Debes especificar el motivo del reportaje en el campo de observaciones antes de actualizar el estado.</>
+                      ) : (
+                        <><strong>Listo para reportar:</strong> Al presionar "Actualizar Estado", se cambiarán tanto el estado como las observaciones de reportaje.</>
+                      )}
                     </p>
+                    
+                    {/* Campo de observaciones integrado en la sección de estado cuando es reportaje */}
+                    <div className="mt-3">
+                      <label className="block text-sm font-medium text-orange-800 mb-1">
+                        Observaciones del Reportaje *
+                      </label>
+                      <textarea
+                        name="observaciones"
+                        value={formData.observaciones}
+                        onChange={handleChange}
+                        rows={3}
+                        className="w-full px-3 py-2 border border-orange-300 rounded-md focus:outline-none focus:ring-1 focus:ring-orange-500 bg-white"
+                        placeholder="Especifique el motivo del reportaje: falla detectada, mantenimiento preventivo, inspección requerida, etc."
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -312,8 +349,10 @@ const GestionHorasAeronave: React.FC<GestionHorasAeronaveProps> = ({
             </div>
           )}
 
-          {/* Sección de Observaciones - ADMINISTRADOR, ESPECIALISTA y COPILOTO */}
-          {(permissions.isAdmin || permissions.isSpecialist || permissions.isPilot) && (
+          {/* Sección de Observaciones - ADMINISTRADOR, ESPECIALISTA y PILOTO */}
+          {/* Solo se muestra si NO se ha seleccionado "Inoperativo por Reportaje" */}
+          {(permissions.isAdmin || permissions.isSpecialist || permissions.isPilot) && 
+           formData.estado !== 'Inoperativo por Reportaje' && (
           <div className="bg-gray-50 rounded-lg p-4">
             <h4 className="text-lg font-medium text-gray-900 mb-4">Observaciones</h4>
             
@@ -338,6 +377,24 @@ const GestionHorasAeronave: React.FC<GestionHorasAeronaveProps> = ({
             >
               {loading ? 'Actualizando...' : 'Actualizar Observaciones'}
             </button>
+            </div>
+          )}
+
+          {/* Mensaje informativo cuando se selecciona "Inoperativo por Reportaje" */}
+          {formData.estado === 'Inoperativo por Reportaje' && (
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+              <div className="flex items-start">
+                <svg className="h-5 w-5 text-orange-400 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <h4 className="text-sm font-medium text-orange-800">📝 Observaciones de Reportaje</h4>
+                  <p className="text-sm text-orange-700 mt-1">
+                    Las observaciones se actualizarán automáticamente junto con el estado cuando presiones <strong>"Actualizar Estado"</strong>. 
+                    No necesitas usar el botón de observaciones por separado.
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 
@@ -381,7 +438,7 @@ const GestionHorasAeronave: React.FC<GestionHorasAeronaveProps> = ({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <div>
-                  <h4 className="text-sm font-medium text-green-800">Acceso de Copiloto</h4>
+                  <h4 className="text-sm font-medium text-green-800">Acceso de Piloto</h4>
                   <p className="text-sm text-green-700 mt-1">
                     <strong>Horas de vuelo:</strong> Puedes agregar horas después de los vuelos.<br/>
                     <strong>Estados:</strong> Acceso completo a todos los estados operativos.<br/>

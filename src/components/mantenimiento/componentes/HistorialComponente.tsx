@@ -156,7 +156,7 @@ export default function HistorialComponente({
       case 'EN_REPARACION':
         return 'bg-orange-100 text-orange-800 border-orange-200';
       case 'FUERA_DE_SERVICIO':
-      case 'CONDENADO':
+      case 'TRAMITE_POR_BAJA':
         return 'bg-red-100 text-red-800 border-red-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
@@ -320,7 +320,7 @@ export default function HistorialComponente({
                     <option value="EN_MANTENIMIENTO">En Mantenimiento</option>
                     <option value="EN_REPARACION">En Reparación</option>
                     <option value="FUERA_DE_SERVICIO">Fuera de Servicio</option>
-                    <option value="CONDENADO">Condenado</option>
+                    <option value="TRAMITE_POR_BAJA">Trámite por Baja</option>
                   </select>
                 </div>
                 

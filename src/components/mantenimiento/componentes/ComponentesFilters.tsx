@@ -45,7 +45,7 @@ export default function ComponentesFilters({
     { value: EstadoComponente.INSTALADO, label: 'Instalado' },
     { value: EstadoComponente.EN_ALMACEN, label: 'En Almacén' },
     { value: EstadoComponente.EN_REPARACION, label: 'En Reparación' },
-    { value: EstadoComponente.CONDENADO, label: 'Condenado' },
+    { value: EstadoComponente.TRAMITE_POR_BAJA, label: 'Trámite por Baja' },
     { value: EstadoComponente.EN_OVERHAUL, label: 'En Overhaul' },
     { value: EstadoComponente.PENDIENTE_INSPECCION, label: 'Pendiente Inspección' }
   ];

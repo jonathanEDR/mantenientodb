@@ -42,7 +42,7 @@ export const estadosMonitoreoComponenteService = {
     }
 
     const response = await axios.get(
-      `/estadosMonitoreoComponente/${estadoId}/historial-observaciones?${params.toString()}`
+      `/estados-monitoreo-componente/${estadoId}/historial-observaciones?${params.toString()}`
     );
     return response.data;
   },
@@ -52,7 +52,7 @@ export const estadosMonitoreoComponenteService = {
     estadoId: string,
     datos: ActualizarEstadoData
   ): Promise<{ success: boolean; data: IEstadoMonitoreoComponente; message: string }> {
-    const response = await axios.put(`/estadosMonitoreoComponente/${estadoId}`, datos);
+    const response = await axios.put(`/estados-monitoreo-componente/${estadoId}`, datos);
     return response.data;
   },
 
@@ -61,7 +61,7 @@ export const estadosMonitoreoComponenteService = {
     estadoId: string,
     observacion: string
   ): Promise<{ success: boolean; data: IEstadoMonitoreoComponente; message: string }> {
-    const response = await axios.put(`/estadosMonitoreoComponente/${estadoId}`, {
+    const response = await axios.put(`/estados-monitoreo-componente/${estadoId}`, {
       observaciones: observacion
     });
     return response.data;
@@ -73,7 +73,7 @@ export const estadosMonitoreoComponenteService = {
     data: IEstadoMonitoreoComponente; 
     message: string 
   }> {
-    const response = await axios.get(`/estadosMonitoreoComponente/${estadoId}`);
+    const response = await axios.get(`/estados-monitoreo-componente/${estadoId}`);
     return response.data;
   }
 
